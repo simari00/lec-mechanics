@@ -703,14 +703,18 @@
             if (!payload) return; // payload builder already showed an error
 
             submitBtn.disabled = true;
-            var request = state.editingId
-                ? api(config.resource, { method: 'PATCH', id: state.editingId, body: payload })
-                : api(config.resource, { method: 'POST', body: payload });
+            // payload builders may return a promise (e.g. to create related records first)
+            Promise.resolve(payload).then(function (resolved) {
+                if (!resolved) return null; // async builder already showed an error
+                var request = state.editingId
+                    ? api(config.resource, { method: 'PATCH', id: state.editingId, body: resolved })
+                    : api(config.resource, { method: 'POST', body: resolved });
 
-            request.then(function () {
-                toast(state.editingId ? 'Record updated.' : config.label + ' saved.');
-                resetForm();
-                return refresh();
+                return request.then(function () {
+                    toast(state.editingId ? 'Record updated.' : config.label + ' saved.');
+                    resetForm();
+                    return refresh();
+                });
             }).catch(function (error) {
                 toast(error.message, true);
             }).finally(function () {
@@ -1172,11 +1176,99 @@
         loadReference().then(function () {
             var form = $('invoice-form');
             if (!form) return;
-            fillSelect(form.elements.customer, cache.customers, customerName, 'Select customer');
-            fillSelect(form.elements.vehicle, cache.vehicles, vehicleLabel, 'Select vehicle (optional)');
-            fillSelect(form.elements.jobCard, cache.job_cards, function (job) {
-                return job.job_number + ' — ' + customerName(job.customer_id);
-            }, 'Select job card (optional)');
+
+            /* Customer and vehicle are typed by the admin instead of picked from a
+               dropdown. Matching options are suggested, and anything new is created
+               automatically when the invoice is saved. */
+            var customerInput = form.elements.customer;
+            var vehicleInput = form.elements.vehicle;
+
+            function refreshSuggestions() {
+                var customerList = $('customer-options');
+                var vehicleList = $('vehicle-options');
+                if (customerList) {
+                    customerList.innerHTML = cache.customers.map(function (c) {
+                        return '<option value="' + esc(customerName(c.id)) + '"></option>';
+                    }).join('');
+                }
+                if (vehicleList) {
+                    vehicleList.innerHTML = cache.vehicles.map(function (v) {
+                        return '<option value="' + esc(v.registration_number + ' — ' + v.make + ' ' + v.model) + '"></option>';
+                    }).join('');
+                }
+            }
+            refreshSuggestions();
+
+            // Keep names in sync so vehicles created here link to the right owner.
+            function vehicleOwnerName() { return customerInput.value.trim(); }
+
+            function isSameCustomer(name, customer) {
+                return name.toLowerCase() === (customer.first_name + ' ' + customer.last_name).trim().toLowerCase();
+            }
+
+            function findCustomerByName(name) {
+                return cache.customers.filter(function (c) { return isSameCustomer(name, c); })[0] || null;
+            }
+
+            function findVehicleByLabel(text) {
+                var needle = text.trim().toLowerCase();
+                return cache.vehicles.filter(function (v) {
+                    return (v.registration_number + ' — ' + v.make + ' ' + v.model).toLowerCase() === needle ||
+                        String(v.registration_number).toLowerCase() === needle;
+                })[0] || null;
+            }
+
+            function ensureCustomer(name) {
+                var existing = findCustomerByName(name);
+                if (existing) return Promise.resolve(existing.id);
+                return api('customers', {
+                    method: 'POST',
+                    body: {
+                        first_name: name,
+                        last_name: '',
+                        phone: 'N/A',
+                        customer_type: 'Individual'
+                    }
+                }).then(function (result) {
+                    var record = { id: result.id, first_name: name, last_name: '', phone: 'N/A' };
+                    cache.customers.push(record);
+                    cache.customerById[result.id] = record;
+                    refreshSuggestions();
+                    return result.id;
+                });
+            }
+
+            function ensureVehicle(text) {
+                var existing = findVehicleByLabel(text);
+                if (existing) return Promise.resolve(existing.id);
+                var ownerName = vehicleOwnerName();
+                return ensureCustomer(ownerName || 'Walk-in Customer').then(function (ownerId) {
+                    var reg = text.split('—')[0].trim();
+                    var rest = text.split('—')[1] || '';
+                    var parts = rest.trim().split(/\s+/);
+                    return api('vehicles', {
+                        method: 'POST',
+                        body: {
+                            customer_id: ownerId,
+                            registration_number: reg,
+                            make: parts[0] || 'Unknown',
+                            model: parts.slice(1).join(' ') || 'Unknown'
+                        }
+                    }).then(function (result) {
+                        var record = {
+                            id: result.id,
+                            customer_id: ownerId,
+                            registration_number: reg,
+                            make: parts[0] || 'Unknown',
+                            model: parts.slice(1).join(' ') || 'Unknown'
+                        };
+                        cache.vehicles.push(record);
+                        cache.vehicleById[result.id] = record;
+                        refreshSuggestions();
+                        return result.id;
+                    });
+                });
+            }
 
             if (!form.elements.invoiceDate.value) form.elements.invoiceDate.value = today();
 
@@ -1228,32 +1320,40 @@
                 fields: ['invoiceNumber', 'invoiceDate', 'customer', 'vehicle', 'jobCard', 'dueDate', 'serviceCharges', 'partsCharges', 'discount', 'tax', 'paymentStatus', 'notes'],
                 payload: function (form) {
                     var f = form.elements;
-                    if (!f.customer.value) {
-                        toast('Please select the customer to bill.', true);
+                    var customerTyped = f.customer.value.trim();
+                    if (!customerTyped) {
+                        toast('Please enter the customer to bill.', true);
                         return null;
                     }
-                    var statusMap = { 'Unpaid': 'Unpaid', 'Partially Paid': 'Partially Paid', 'Paid': 'Paid', 'Overdue': 'Unpaid' };
-                    return {
-                        invoice_number: f.invoiceNumber.value.trim(),
-                        customer_id: Number(f.customer.value),
-                        vehicle_id: f.vehicle.value ? Number(f.vehicle.value) : null,
-                        job_card_id: f.jobCard.value ? Number(f.jobCard.value) : null,
-                        invoice_date: f.invoiceDate.value || today(),
-                        due_date: f.dueDate.value || null,
-                        service_charges: Number(f.serviceCharges.value || 0),
-                        parts_charges: Number(f.partsCharges.value || 0),
-                        discount: Number(f.discount.value || 0),
-                        tax: Number(f.tax.value || 0),
-                        status: statusMap[f.paymentStatus.value] || 'Unpaid',
-                        notes: f.notes.value.trim() || null
-                    };
+                    // Resolve the typed customer (and vehicle, if any) before saving.
+                    return ensureCustomer(customerTyped).then(function (customerId) {
+                        var vehicleTyped = f.vehicle.value.trim();
+                        var vehiclePromise = vehicleTyped ? ensureVehicle(vehicleTyped) : Promise.resolve(null);
+                        return vehiclePromise.then(function (vehicleId) {
+                            var statusMap = { 'Unpaid': 'Unpaid', 'Partially Paid': 'Partially Paid', 'Paid': 'Paid', 'Overdue': 'Unpaid' };
+                            return {
+                                invoice_number: f.invoiceNumber.value.trim(),
+                                customer_id: customerId,
+                                vehicle_id: vehicleId,
+                                job_card_id: f.jobCard.value ? Number(f.jobCard.value) : null,
+                                invoice_date: f.invoiceDate.value || today(),
+                                due_date: f.dueDate.value || null,
+                                service_charges: Number(f.serviceCharges.value || 0),
+                                parts_charges: Number(f.partsCharges.value || 0),
+                                discount: Number(f.discount.value || 0),
+                                tax: Number(f.tax.value || 0),
+                                status: statusMap[f.paymentStatus.value] || 'Unpaid',
+                                notes: f.notes.value.trim() || null
+                            };
+                        });
+                    });
                 },
                 fill: function (form, record) {
                     var f = form.elements;
                     f.invoiceNumber.value = record.invoice_number || '';
                     f.invoiceDate.value = record.invoice_date || '';
-                    f.customer.value = String(record.customer_id || '');
-                    f.vehicle.value = record.vehicle_id ? String(record.vehicle_id) : '';
+                    f.customer.value = customerName(record.customer_id);
+                    f.vehicle.value = record.vehicle_id ? vehicleLabel(record.vehicle_id) : '';
                     f.jobCard.value = record.job_card_id ? String(record.job_card_id) : '';
                     f.dueDate.value = record.due_date || '';
                     f.serviceCharges.value = record.service_charges || 0;
@@ -1369,6 +1469,7 @@
                         '<td><span style="color:' + statusColor(row.status) + ';font-weight:700;">' + esc(row.status) + '</span></td>' +
                         '<td><code class="track-code-cell">' + esc(row.tracking_code || '—') + '</code></td>' +
                         '<td style="white-space:nowrap;">' +
+                        '<button type="button" class="row-track" data-id="' + row.id + '">🔍 Track</button>' +
                         '<button type="button" class="row-edit" data-id="' + row.id + '">Edit</button>' +
                         '<button type="button" class="row-delete" data-id="' + row.id + '">Delete</button>' +
                         '</td></tr>';
@@ -1386,6 +1487,14 @@
                         if ($('sr-code-display')) $('sr-code-display').value = record.tracking_code || '—';
                         panel.hidden = false;
                         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                });
+
+                // Track button: shows the customer-facing status view for this request.
+                tbody.querySelectorAll('.row-track').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        var record = rows.filter(function (r) { return String(r.id) === button.getAttribute('data-id'); })[0];
+                        if (record) showTrackModal(record);
                     });
                 });
 
@@ -1419,6 +1528,118 @@
         }
 
         refresh();
+    }
+
+    /* ================= track-status modal (customer view) ================= */
+
+    var TRACK_STEPS = [
+        { key: 'Received',  label: 'Request Received',   note: 'Your request is in our system and waiting for review.' },
+        { key: 'In Review', label: 'Under Review',       note: 'Our team is reviewing your request.' },
+        { key: 'Approved',  label: 'Approved by Admin',  note: 'Good news — the admin has approved your request.' },
+        { key: 'Scheduled', label: 'Booked & Scheduled', note: 'Your service has been scheduled. See the date below.' },
+        { key: 'Completed', label: 'Service Completed',  note: 'The work is done. Thank you for choosing LEC Mechanics.' }
+    ];
+    var TRACK_STEP_FOR_STATUS = { 'New': 0, 'Contacted': 1, 'Approved': 2, 'Scheduled': 3, 'Completed': 4 };
+
+    function showTrackModal(record) {
+        if (document.getElementById('lec-track-modal')) return;
+
+        var status = record.status || 'New';
+        var code = record.tracking_code || '—';
+        var current = TRACK_STEP_FOR_STATUS[status] !== undefined ? TRACK_STEP_FOR_STATUS[status] : 0;
+
+        function fmtDate(value) {
+            if (!value) return '—';
+            var d = new Date(String(value).replace(' ', 'T'));
+            return isNaN(d) ? esc(value) : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        var body;
+        if (status === 'Declined' || status === 'Closed') {
+            var closedNote = status === 'Declined'
+                ? 'Unfortunately this request was not approved. The customer can call 0771 232 171 to discuss it.'
+                : 'This request has been closed. The customer can submit a new request if they still need service.';
+            body =
+                '<span class="track-status-pill track-pill-declined">' + esc(status) + '</span>' +
+                '<h3>Request ' + esc(status) + '</h3>' +
+                '<p>' + closedNote + '</p>' +
+                '<dl class="track-details">' +
+                    '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
+                    '<div><dt>Service</dt><dd>' + esc(record.service_name || record.request_type) + '</dd></div>' +
+                    '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
+                '</dl>';
+        } else {
+            var stepsHtml = TRACK_STEPS.map(function (step, index) {
+                var state = index < current ? 'done' : (index === current ? 'current' : 'todo');
+                return '<li class="track-step ' + state + '">' +
+                    '<span class="track-step-dot"></span>' +
+                    '<div><strong>' + esc(step.label) + '</strong>' +
+                    (state === 'current' ? '<p>' + esc(step.note) + '</p>' : '') +
+                    '</div></li>';
+            }).join('');
+
+            body =
+                '<span class="track-status-pill">' + esc(status) + '</span>' +
+                '<h3>' + esc(TRACK_STEPS[current].label) + '</h3>' +
+                '<p>' + esc(TRACK_STEPS[current].note) + '</p>' +
+                '<ol class="track-steps">' + stepsHtml + '</ol>' +
+                '<dl class="track-details">' +
+                    '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
+                    '<div><dt>Service</dt><dd>' + esc(record.service_name || record.request_type) + '</dd></div>' +
+                    '<div><dt>Vehicle</dt><dd>' + esc(record.registration_number || '—') + '</dd></div>' +
+                    '<div><dt>Preferred date</dt><dd>' + fmtDate(record.preferred_date) + '</dd></div>' +
+                    '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
+                    '<div><dt>Last update</dt><dd>' + fmtDate(record.updated_at) + '</dd></div>' +
+                '</dl>';
+        }
+
+        var overlay = document.createElement('div');
+        overlay.id = 'lec-track-modal';
+        overlay.style.cssText =
+            'position:fixed;inset:0;z-index:9999;background:rgba(8,12,20,.7);' +
+            'display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;';
+        overlay.innerHTML =
+            '<div class="track-card" style="max-width:560px;width:100%;margin:auto;position:relative;">' +
+                '<button type="button" id="lec-track-close" ' +
+                    'style="position:absolute;top:12px;right:12px;border:0;background:none;font-size:24px;cursor:pointer;line-height:1;color:#777;">&times;</button>' +
+                '<div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#999;margin-bottom:6px;">CUSTOMER VIEW — WHAT ' + esc(record.full_name || 'THE CLIENT') + ' SEES</div>' +
+                body +
+                '<div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;">' +
+                    '<button type="button" id="lec-track-copy" class="admin-primary-button" style="flex:1;min-width:180px;">📋 Copy tracking code</button>' +
+                    '<a href="https://wa.me/?text=' + encodeURIComponent('Your LEC Mechanics tracking code is ' + code + ' — track your service status at /pages/track.html') + '" target="_blank" rel="noopener" ' +
+                    'style="flex:1;min-width:150px;text-align:center;padding:12px;border:0;border-radius:8px;background:#25D366;color:#fff;font-size:13px;font-weight:700;text-decoration:none;">WhatsApp the client</a>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        overlay.querySelector('#lec-track-close').addEventListener('click', function () { overlay.remove(); });
+        overlay.addEventListener('click', function (event) { if (event.target === overlay) overlay.remove(); });
+        document.addEventListener('keydown', function onKey(event) {
+            if (event.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+        });
+
+        overlay.querySelector('#lec-track-copy').addEventListener('click', function () {
+            var done = function () {
+                toast('Tracking code copied — paste it to your client.');
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(done).catch(function () { fallbackCopy(code); done(); });
+            } else {
+                fallbackCopy(code);
+                done();
+            }
+        });
+    }
+
+    function fallbackCopy(text) {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        temp.style.cssText = 'position:fixed;left:-9999px;';
+        document.body.appendChild(temp);
+        temp.select();
+        try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+        temp.remove();
     }
 
     /* ================= page: reports ================= */

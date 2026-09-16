@@ -206,13 +206,19 @@
                                 Customer
                             </label>
 
-                            <select id="customer" name="customer" required>
+                            <input
+                                type="text"
+                                id="customer"
+                                name="customer"
+                                list="customer-options"
+                                placeholder="Type customer name..."
+                                autocomplete="off"
+                                required
+                            >
 
-                                <option value="">
-                                    Select customer
-                                </option>
+                            <datalist id="customer-options"></datalist>
 
-                            </select>
+                            <small class="field-hint">Type a new name to add the customer automatically.</small>
 
                         </div>
 
@@ -224,13 +230,18 @@
                                 Vehicle
                             </label>
 
-                            <select id="vehicle" name="vehicle">
+                            <input
+                                type="text"
+                                id="vehicle"
+                                name="vehicle"
+                                list="vehicle-options"
+                                placeholder="Type vehicle registration..."
+                                autocomplete="off"
+                            >
 
-                                <option value="">
-                                    Select vehicle
-                                </option>
+                            <datalist id="vehicle-options"></datalist>
 
-                            </select>
+                            <small class="field-hint">Optional — type a registration to add the vehicle automatically.</small>
 
                         </div>
 

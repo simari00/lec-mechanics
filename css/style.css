@@ -2833,6 +2833,14 @@ textarea {
     background: var(--surface);
 }
 
+/* Hint text under form inputs */
+.form-group .field-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: #888;
+}
+
 .form-buttons {
     display: flex;
     justify-content: flex-end;
@@ -2907,6 +2915,12 @@ tbody tr:hover {
     cursor: pointer;
     margin-right: 6px;
     transition: opacity 0.2s;
+}
+
+.row-track {
+    background: #eefaf1;
+    color: var(--green);
+    border: none;
 }
 
 .row-edit {
@@ -3807,7 +3821,8 @@ html[data-theme="dark"] .sidebar-menu a {
     color: var(--text);
 }
 
-.track-declined .track-status-pill {
+.track-declined .track-status-pill,
+.track-pill-declined {
     background: #fdecea;
     border-color: #f5c6c2;
     color: #c0392b;
