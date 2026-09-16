@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Gallery | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+            <a href="vehicles.html">🚗 Vehicles</a>
+            <a href="mechanics.html">🔧 Mechanics</a>
+            <a href="job-cards.html">📋 Job Cards</a>
+            <a href="spare-parts.html">⚙️ Spare Parts</a>
+            <a href="invoices.html">💰 Invoices</a>
+            <a href="gallery.html" class="active">🖼️ Gallery</a>
+            <a href="reports.html">📈 Reports</a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">🌐 View Website</a>
+            <a href="#" id="lec-logout">🚪 Logout</a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+        <!-- HEADER -->
+        <header class="admin-header">
+
+            <div>
+                <h1>Website Gallery</h1>
+                <p>Upload photos that appear in the gallery on the public website.</p>
+            </div>
+
+            <div class="admin-user">
+
+                <div>
+                    <strong>Administrator</strong>
+                    <small>LEC Mechanics</small>
+                </div>
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- UPLOAD PANEL -->
+        <section class="admin-page-content">
+
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h2>Upload Images</h2>
+                        <p>JPEG, PNG, WebP or GIF — up to 5 MB each. You can select several at once.</p>
+                    </div>
+                </div>
+
+                <form id="gallery-upload-form">
+
+                    <div class="admin-form-grid">
+                        <div class="form-group">
+                            <label for="gallery-title">Title (optional)</label>
+                            <input type="text" id="gallery-title" maxlength="120" placeholder="e.g. Engine rebuild">
+                        </div>
+                        <div class="form-group">
+                            <label for="gallery-caption">Caption (optional)</label>
+                            <input type="text" id="gallery-caption" maxlength="300" placeholder="Shown under the photo">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gallery-file">Choose image(s)</label>
+                        <input type="file" id="gallery-file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+                        <small style="color:var(--grey-2,#777);font-size:12px;">
+                            If no title is entered, the file name is used.
+                        </small>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="submit" class="admin-primary-button" id="gallery-upload-btn">
+                            ⬆ Upload to Website
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- GALLERY GRID -->
+            <div class="dashboard-panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h2>Published Images</h2>
+                        <p>These appear on the website gallery immediately.</p>
+                    </div>
+                    <span id="gallery-count" style="color:var(--grey-2,#777);font-size:13px;"></span>
+                </div>
+
+                <div id="gallery-grid" class="gallery-admin-grid">
+                    <p class="table-empty">Loading…</p>
+                </div>
+
+            </div>
+
+            <!-- EDIT DIALOG -->
+            <dialog id="gallery-edit-dialog" style="border:0;border-radius:12px;padding:0;max-width:420px;width:90%;">
+                <form method="dialog" style="display:block;padding:24px;">
+                    <h3 style="margin:0 0 16px;">Edit image details</h3>
+                    <input type="hidden" id="gedit-id">
+                    <div class="form-group">
+                        <label for="gedit-title">Title</label>
+                        <input type="text" id="gedit-title" maxlength="120">
+                    </div>
+                    <div class="form-group">
+                        <label for="gedit-caption">Caption</label>
+                        <input type="text" id="gedit-caption" maxlength="300">
+                    </div>
+                    <div class="form-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button type="button" class="cancel-button" id="gedit-cancel">Cancel</button>
+                        <button type="submit" class="admin-primary-button" id="gedit-save">Save</button>
+                    </div>
+                </form>
+            </dialog>
+
+            <div class="admin-footer">
+                <p>LEC Mechanics Management System © 2026. All Rights Reserved.</p>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- JAVASCRIPT -->
+    <script src="../js/admin.js"></script>
+    <script src="../js/script.js"></script>
+</body>
+</html>

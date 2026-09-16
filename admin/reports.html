@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics - LEC Mechanics</title>
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="admin-body">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+            <a href="vehicles.html">🚗 Vehicles</a>
+            <a href="mechanics.html">🔧 Mechanics</a>
+            <a href="job-cards.html">📋 Job Cards</a>
+            <a href="spare-parts.html">📦 Spare Parts</a>
+            <a href="invoices.html">🧾 Invoices</a>
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html" class="active">📈 Reports</a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="../index.html">🏠 View Website</a>
+        </div>
+    </aside>
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+        <!-- HEADER -->
+        <header class="admin-header">
+            <div>
+                <h1>Reports & Analytics</h1>
+                <p>Monitor business performance and generate useful reports.</p>
+            </div>
+            <div class="admin-user">
+                <div>
+                    <strong>Administrator</strong>
+                    <small>System Administrator</small>
+                </div>
+                <div class="user-avatar">
+                    A
+                </div>
+            </div>
+        </header>
+        <!-- REPORT CONTENT -->
+        <section class="admin-page-content">
+            <!-- PAGE TITLE -->
+            <div class="page-title-row">
+                <div>
+                    <h2>Business Overview</h2>
+                    <p>View key statistics and performance indicators.</p>
+                </div>
+                <button class="admin-primary-button" onclick="window.print()">
+                    🖨 Print Report
+                </button>
+            </div>
+            <!-- SUMMARY CARDS -->
+            <div class="report-summary-grid">
+                <div class="report-card">
+                    <div class="report-icon">
+                        💰
+                    </div>
+                    <div>
+                        <span>Total Revenue</span>
+                        <h2 id="rep-revenue">$0.00</h2>
+                        <small>Payments received</small>
+                    </div>
+                </div>
+                <div class="report-card">
+                    <div class="report-icon">
+                        🧾
+                    </div>
+                    <div>
+                        <span>Total Invoices</span>
+                        <h2 id="rep-invoices">0</h2>
+                        <small>Invoices created</small>
+                    </div>
+                </div>
+                <div class="report-card">
+                    <div class="report-icon">
+                        🚗
+                    </div>
+                    <div>
+                        <span>Vehicles Serviced</span>
+                        <h2 id="rep-vehicles">0</h2>
+                        <small>Vehicles recorded</small>
+                    </div>
+                </div>
+                <div class="report-card">
+                    <div class="report-icon">
+                        🔧
+                    </div>
+                    <div>
+                        <span>Jobs Completed</span>
+                        <h2 id="rep-jobs-done">0</h2>
+                        <small>Completed job cards</small>
+                    </div>
+                </div>
+            </div>
+            <!-- FILTER PANEL -->
+            <div class="admin-form-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Report Filters</h2>
+                        <p>Select a period to analyse business activity.</p>
+                    </div>
+                </div>
+                <div class="admin-form-grid">
+                    <div class="form-group">
+                        <label for="reportType">
+                            Report Type
+                        </label>
+                        <select id="reportType">
+                            <option value="business">
+                                Business Performance
+                            </option>
+                            <option value="revenue">
+                                Revenue Report
+                            </option>
+                            <option value="jobs">
+                                Job Card Report
+                            </option>
+                            <option value="customers">
+                                Customer Report
+                            </option>
+                            <option value="vehicles">
+                                Vehicle Service Report
+                            </option>
+                            <option value="parts">
+                                Spare Parts Report
+                            </option>
+                            <option value="payments">
+                                EcoCash Payment Report
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reportPeriod">
+                            Period
+                        </label>
+                        <select id="reportPeriod">
+                            <option value="all">
+                                All Time
+                            </option>
+                            <option value="today">
+                                Today
+                            </option>
+                            <option value="week">
+                                This Week
+                            </option>
+                            <option value="month">
+                                This Month
+                            </option>
+                            <option value="year">
+                                This Year
+                            </option>
+                            <option value="custom">
+                                Custom Date Range
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="startDate">
+                            Start Date
+                        </label>
+                        <input
+                            type="date"
+                            id="startDate"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">
+                            End Date
+                        </label>
+                        <input
+                            type="date"
+                            id="endDate"
+                        >
+                    </div>
+                </div>
+                <div class="form-buttons">
+                    <button
+                        type="button"
+                        class="cancel-button"
+                        id="rep-clear"
+                    >
+                        Clear
+                    </button>
+                    <button
+                        type="button"
+                        class="admin-primary-button"
+                        id="rep-generate"
+                    >
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+            <!-- REVENUE SECTION -->
+            <div class="reports-grid">
+                <div class="dashboard-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Revenue Overview</h2>
+                            <p>Monthly revenue performance</p>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder">
+                        <div class="chart-bars" id="rep-chart">
+                            <div class="table-empty" style="width:100%;">Loading revenue data…</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- JOB STATUS -->
+                <div class="dashboard-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Job Status</h2>
+                            <p>Current job card distribution</p>
+                        </div>
+                    </div>
+                    <div class="status-report-list" id="rep-job-status">
+                        <div class="status-report-item">
+                            <div>
+                                <span class="status-indicator pending"></span>
+                                Pending
+                            </div>
+                            <strong data-status="Pending">0</strong>
+                        </div>
+                        <div class="status-report-item">
+                            <div>
+                                <span class="status-indicator progress"></span>
+                                In Progress
+                            </div>
+                            <strong data-status="In Progress">0</strong>
+                        </div>
+                        <div class="status-report-item">
+                            <div>
+                                <span class="status-indicator parts"></span>
+                                Awaiting Parts
+                            </div>
+                            <strong data-status="Awaiting Parts">0</strong>
+                        </div>
+                        <div class="status-report-item">
+                            <div>
+                                <span class="status-indicator completed"></span>
+                                Completed
+                            </div>
+                            <strong data-status="Completed">0</strong>
+                        </div>
+                        <div class="status-report-item">
+                            <div>
+                                <span class="status-indicator cancelled"></span>
+                                Cancelled
+                            </div>
+                            <strong data-status="Cancelled">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- PAYMENT AND INVENTORY -->
+            <div class="reports-grid">
+                <!-- PAYMENT SUMMARY -->
+                <div class="dashboard-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Payment Summary</h2>
+                            <p>EcoCash payment information</p>
+                        </div>
+                    </div>
+                    <div class="payment-report" id="rep-payments">
+                        <div class="payment-item">
+                            <span>Paid Invoices</span>
+                            <strong data-pay="paid">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Partially Paid</span>
+                            <strong data-pay="partial">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Unpaid Invoices</span>
+                            <strong data-pay="unpaid">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Outstanding Amount</span>
+                            <strong data-pay="outstanding">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+                <!-- INVENTORY SUMMARY -->
+                <div class="dashboard-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Inventory Summary</h2>
+                            <p>Spare parts stock information</p>
+                        </div>
+                    </div>
+                    <div class="payment-report" id="rep-inventory">
+                        <div class="payment-item">
+                            <span>Total Parts</span>
+                            <strong data-inv="total">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Stock Quantity</span>
+                            <strong data-inv="qty">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Low Stock Items</span>
+                            <strong data-inv="low">0</strong>
+                        </div>
+                        <div class="payment-item">
+                            <span>Inventory Value</span>
+                            <strong data-inv="value">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- REPORT TABLE -->
+            <div class="dashboard-panel report-table-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Generated Report</h2>
+                        <p>Detailed business report results.</p>
+                    </div>
+                    <button
+                        class="admin-primary-button"
+                        onclick="window.print()"
+                    >
+                        Print
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr id="rep-table-head">
+                                <th>#</th>
+                                <th>Item</th>
+                                <th>Detail</th>
+                                <th>Count</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody">
+                            <tr>
+                                <td colspan="5" class="table-empty">
+                                    📊
+                                    <br><br>
+                                    Choose a report type and period, then click
+                                    Generate Report — or explore the live
+                                    summaries above.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- FOOTER -->
+            <div class="admin-footer">
+                <p>
+                    LEC Mechanics Management System
+                    © 2026. All Rights Reserved.
+                </p>
+            </div>
+        </section>
+    </main>
+    <!-- JAVASCRIPT -->
+    <script src="../js/admin.js"></script>
+    <script src="../js/script.js"></script>
+</body>
+</html>

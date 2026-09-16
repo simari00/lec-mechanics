@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Your Service | LEC Mechanics Harare</title>
+    <meta name="description" content="Track your service request at LEC Mechanics. Enter your tracking code to see if the admin has approved and scheduled your booking.">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <!-- ================= NAVBAR ================= -->
+    <header class="navbar">
+        <a href="../index.html" class="logo lec-brand">
+            <span class="lec-main">LEC</span>
+            <span class="lec-sub">MECHANICS</span>
+        </a>
+        <nav class="nav-links">
+            <a href="../index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+            <a href="track.html" class="active">Track</a>
+            <a href="../admin/dashboard.html">Admin</a>
+        </nav>
+    </header>
+
+    <!-- ================= TRACK HERO ================= -->
+    <section class="track-hero">
+        <div class="contact-eyebrow">
+            <span></span>
+            SERVICE TRACKING
+        </div>
+        <h1>Track your <em>service request</em></h1>
+        <p>
+            Enter the tracking code we gave you when you submitted your request to see
+            whether the admin has reviewed, approved and scheduled your service.
+        </p>
+    </section>
+
+    <!-- ================= TRACKER ================= -->
+    <section class="track-section">
+        <form id="track-form" class="track-form" autocomplete="off">
+            <label for="track-code">TRACKING CODE</label>
+            <div class="track-input-row">
+                <input
+                    type="text"
+                    id="track-code"
+                    name="code"
+                    placeholder="e.g. LEC-4F7A2B"
+                    required
+                >
+                <button type="submit">Track</button>
+            </div>
+            <p class="track-hint">
+                Your code was shown after you submitted the contact form (format: LEC-XXXXXX).
+                Lost it? Call us on <a href="tel:0771232171">0771 232 171</a>.
+            </p>
+            <p class="form-feedback" hidden></p>
+        </form>
+
+        <div id="track-result" class="track-result" hidden></div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <span class="lec-main">LEC</span> <span class="lec-sub">MECHANICS</span>
+                <p>Belvedere, Rotten Row Area, Harare, Zimbabwe</p>
+            </div>
+            <div class="footer-links">
+                <a href="../index.html">Home</a>
+                <a href="services.html">Services</a>
+                <a href="contact.html">Contact</a>
+                <a href="track.html">Track Service</a>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 LEC Mechanics. All rights reserved.</div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

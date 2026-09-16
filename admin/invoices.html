@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Invoices & Payments | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+            <a href="vehicles.html">🚗 Vehicles</a>
+            <a href="mechanics.html">🔧 Mechanics</a>
+            <a href="job-cards.html">📋 Job Cards</a>
+            <a href="spare-parts.html">⚙️ Spare Parts</a>
+            <a href="invoices.html" class="active">💰 Invoices</a>
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">📈 Reports</a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">🌐 View Website</a>
+            <a href="#">🚪 Logout</a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+        <!-- HEADER -->
+        <header class="admin-header">
+
+            <div>
+                <h1>Invoices & Payments</h1>
+                <p>Create invoices and record EcoCash payments.</p>
+            </div>
+
+            <div class="admin-user">
+
+                <div>
+                    <strong>Administrator</strong>
+                    <small>LEC Mechanics</small>
+                </div>
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+        <section class="admin-page-content">
+
+
+            <!-- PAGE TITLE -->
+            <div class="page-title-row">
+
+                <div>
+                    <h2>Invoice Management</h2>
+                    <p>Manage invoices, charges and EcoCash payments.</p>
+                </div>
+
+            </div>
+
+
+            <!-- INVOICE SUMMARY -->
+            <div class="dashboard-stats">
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        🧾
+                    </div>
+
+                    <div>
+                        <span>Total Invoices</span>
+                        <h2 id="stat-inv-count">0</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        💵
+                    </div>
+
+                    <div>
+                        <span>Total Revenue</span>
+                        <h2 id="stat-inv-revenue">$0.00</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        ⏳
+                    </div>
+
+                    <div>
+                        <span>Outstanding</span>
+                        <h2 id="stat-inv-outstanding">$0.00</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        ✅
+                    </div>
+
+                    <div>
+                        <span>Paid Invoices</span>
+                        <h2 id="stat-inv-paid">0</h2>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CREATE INVOICE -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Create New Invoice</h2>
+                        <p>Enter the billing information for the customer.</p>
+                    </div>
+
+                </div>
+
+
+                <form id="invoice-form">
+
+                    <div class="admin-form-grid">
+
+
+                        <!-- INVOICE NUMBER -->
+                        <div class="form-group">
+
+                            <label for="invoiceNumber">
+                                Invoice Number
+                            </label>
+
+                            <input
+                                type="text"
+                                id="invoiceNumber"
+                                placeholder="e.g. INV-0001"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- INVOICE DATE -->
+                        <div class="form-group">
+
+                            <label for="invoiceDate">
+                                Invoice Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="invoiceDate"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- CUSTOMER -->
+                        <div class="form-group">
+
+                            <label for="customer">
+                                Customer
+                            </label>
+
+                            <select id="customer" name="customer" required>
+
+                                <option value="">
+                                    Select customer
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- VEHICLE -->
+                        <div class="form-group">
+
+                            <label for="vehicle">
+                                Vehicle
+                            </label>
+
+                            <select id="vehicle" name="vehicle">
+
+                                <option value="">
+                                    Select vehicle
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- JOB CARD -->
+                        <div class="form-group">
+
+                            <label for="jobCard">
+                                Job Card
+                            </label>
+
+                            <select id="jobCard" name="jobCard">
+
+                                <option value="">
+                                    Select job card
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- DUE DATE -->
+                        <div class="form-group">
+
+                            <label for="dueDate">
+                                Payment Due Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="dueDate"
+                            >
+
+                        </div>
+
+
+                        <!-- SERVICE CHARGES -->
+                        <div class="form-group">
+
+                            <label for="serviceCharges">
+                                Service / Labour Charges (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="serviceCharges"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                placeholder="0.00"
+                            >
+
+                        </div>
+
+
+                        <!-- PARTS CHARGES -->
+                        <div class="form-group">
+
+                            <label for="partsCharges">
+                                Spare Parts Charges (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="partsCharges"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                placeholder="0.00"
+                            >
+
+                        </div>
+
+
+                        <!-- DISCOUNT -->
+                        <div class="form-group">
+
+                            <label for="discount">
+                                Discount (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="discount"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                placeholder="0.00"
+                            >
+
+                        </div>
+
+
+                        <!-- TAX -->
+                        <div class="form-group">
+
+                            <label for="tax">
+                                Tax / VAT (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="tax"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                placeholder="0.00"
+                            >
+
+                        </div>
+
+
+                        <!-- TOTAL -->
+                        <div class="form-group">
+
+                            <label for="total">
+                                Invoice Total (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="total"
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                readonly
+                            >
+
+                        </div>
+
+
+                        <!-- PAYMENT METHOD -->
+                        <div class="form-group">
+
+                            <label for="paymentMethod">
+                                Payment Method
+                            </label>
+
+                            <input
+                                type="text"
+                                id="paymentMethod"
+                                value="EcoCash"
+                                readonly
+                            >
+
+                        </div>
+
+
+                        <!-- ECOCASH RECEIVING NUMBER -->
+                        <div class="form-group">
+
+                            <label for="ecocashNumber">
+                                EcoCash Receiving Number
+                            </label>
+
+                            <select id="ecocashNumber">
+
+                                <option value="">
+                                    Select EcoCash number
+                                </option>
+
+                                <option value="0771232171">
+                                    0771232171 — Luckmore Godzi
+                                </option>
+
+                                <option value="0772326679">
+                                    0772326679 — Elvis Godzi
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- PAYMENT STATUS -->
+                        <div class="form-group">
+
+                            <label for="paymentStatus">
+                                Payment Status
+                            </label>
+
+                            <select id="paymentStatus">
+
+                                <option value="Unpaid">
+                                    Unpaid
+                                </option>
+
+                                <option value="Partially Paid">
+                                    Partially Paid
+                                </option>
+
+                                <option value="Paid">
+                                    Paid
+                                </option>
+
+                                <option value="Overdue">
+                                    Overdue
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- AMOUNT PAID -->
+                        <div class="form-group">
+
+                            <label for="amountPaid">
+                                Amount Paid (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="amountPaid"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                placeholder="Enter amount paid"
+                            >
+
+                        </div>
+
+
+                        <!-- ECOCASH TRANSACTION REFERENCE -->
+                        <div class="form-group">
+
+                            <label for="transactionReference">
+                                EcoCash Transaction Reference
+                            </label>
+
+                            <input
+                                type="text"
+                                id="transactionReference"
+                                placeholder="Enter EcoCash transaction reference"
+                            >
+
+                        </div>
+
+
+                        <!-- PAYMENT DATE -->
+                        <div class="form-group">
+
+                            <label for="paymentDate">
+                                Payment Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="paymentDate"
+                            >
+
+                        </div>
+
+
+                        <!-- NOTES -->
+                        <div class="form-group full-width">
+
+                            <label for="notes">
+                                Invoice / Payment Notes
+                            </label>
+
+                            <textarea
+                                id="notes"
+                                rows="4"
+                                placeholder="Enter additional invoice or payment notes..."
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="button"
+                            class="cancel-button"
+                        >
+                            🖨️ Print Preview
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Invoice
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <!-- INVOICE LIST -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Invoice List</h2>
+                        <p>View and manage customer invoices.</p>
+                    </div>
+
+                    <input
+                        type="text"
+                        class="table-search"
+                        placeholder="Search invoices..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+                                <th>Invoice</th>
+                                <th>Customer</th>
+                                <th>Vehicle</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Paid</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="invoice-tbody">
+
+                            <tr>
+
+                                <td colspan="9" class="table-empty">
+
+                                    Loading invoices…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+        <footer class="admin-footer">
+
+            <p>
+                © 2026 LEC Mechanics. Admin Management System.
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

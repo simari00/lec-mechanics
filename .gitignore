@@ -1,0 +1,8 @@
+node_modules/
+.vercel
+.env
+.env.local
+*.log
+.freebuff/
+backend/lec_mechanics.sqlite
+.DS_Store

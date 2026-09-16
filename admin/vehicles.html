@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Vehicles | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+
+            <span>LEC</span> MECHANICS
+
+            <small>GARAGE MANAGEMENT</small>
+
+        </div>
+
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">
+                📊 Dashboard
+            </a>
+
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">
+                👥 Customers
+            </a>
+
+            <a href="vehicles.html" class="active">
+                🚗 Vehicles
+            </a>
+
+            <a href="mechanics.html">
+                🔧 Mechanics
+            </a>
+
+            <a href="job-cards.html">
+                📝 Job Cards
+            </a>
+
+            <a href="spare-parts.html">
+                📦 Spare Parts
+            </a>
+
+            <a href="invoices.html">
+                💰 Invoices
+            </a>
+
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">
+                📈 Reports
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">
+                🌐 View Website
+            </a>
+
+            <a href="#">
+                ⚙️ Settings
+            </a>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- MAIN -->
+
+    <main class="admin-main">
+
+
+        <!-- HEADER -->
+
+        <header class="admin-header">
+
+            <div>
+
+                <h1>
+                    Vehicles
+                </h1>
+
+                <p>
+                    Manage customer vehicles
+                </p>
+
+            </div>
+
+
+            <div class="admin-user">
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+                <div>
+
+                    <strong>
+                        Administrator
+                    </strong>
+
+                    <small>
+                        Garage Manager
+                    </small>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- CONTENT -->
+
+        <section class="admin-page-content">
+
+
+            <!-- TITLE -->
+
+            <div class="page-title-row">
+
+                <div>
+
+                    <h2>
+                        Vehicle Management
+                    </h2>
+
+                    <p>
+                        Register vehicles and link them to customers.
+                    </p>
+
+                </div>
+
+                <button class="admin-primary-button">
+                    + Add Vehicle
+                </button>
+
+            </div>
+
+
+
+            <!-- VEHICLE FORM -->
+
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Register Vehicle
+                        </h2>
+
+                        <p>
+                            Enter the vehicle information below.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form id="vehicle-form">
+
+
+                    <div class="admin-form-grid">
+
+
+                        <!-- CUSTOMER -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Vehicle Owner
+                            </label>
+
+                            <select name="customer_id" required>
+
+                                <option value="">
+                                    Select customer
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- REGISTRATION -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Registration Number
+                            </label>
+
+                            <input
+                                type="text"
+                                name="registration_number"
+                                placeholder="e.g. ABC 1234"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- MAKE -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Vehicle Make
+                            </label>
+
+                            <input
+                                type="text"
+                                name="make"
+                                placeholder="e.g. Toyota"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- MODEL -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Vehicle Model
+                            </label>
+
+                            <input
+                                type="text"
+                                name="model"
+                                placeholder="e.g. Corolla"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- YEAR -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Year
+                            </label>
+
+                            <input
+                                type="number"
+                                name="vehicle_year"
+                                placeholder="e.g. 2020"
+                                min="1900"
+                                max="2100"
+                            >
+
+                        </div>
+
+
+                        <!-- COLOUR -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Colour
+                            </label>
+
+                            <input
+                                type="text"
+                                name="colour"
+                                placeholder="e.g. White"
+                            >
+
+                        </div>
+
+
+                        <!-- VIN -->
+
+                        <div class="form-group">
+
+                            <label>
+                                VIN / Chassis Number
+                            </label>
+
+                            <input
+                                type="text"
+                                name="vin"
+                                placeholder="Enter VIN or chassis number"
+                            >
+
+                        </div>
+
+
+                        <!-- MILEAGE -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Current Mileage (km)
+                            </label>
+
+                            <input
+                                type="number"
+                                name="current_mileage"
+                                placeholder="e.g. 85000"
+                            >
+
+                        </div>
+
+
+                        <!-- ENGINE -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Engine Type
+                            </label>
+
+                            <select name="engine_type">
+
+                                <option value="">
+                                    Select engine type
+                                </option>
+
+                                <option value="Petrol">
+                                    Petrol
+                                </option>
+
+                                <option value="Diesel">
+                                    Diesel
+                                </option>
+
+                                <option value="Hybrid">
+                                    Hybrid
+                                </option>
+
+                                <option value="Electric">
+                                    Electric
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- TRANSMISSION -->
+
+                        <div class="form-group">
+
+                            <label>
+                                Transmission
+                            </label>
+
+                            <select name="transmission">
+
+                                <option value="">
+                                    Select transmission
+                                </option>
+
+                                <option value="Manual">
+                                    Manual
+                                </option>
+
+                                <option value="Automatic">
+                                    Automatic
+                                </option>
+
+                                <option value="CVT">
+                                    CVT
+                                </option>
+
+                                <option value="Other">
+                                    Other
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- NOTES -->
+
+                        <div class="form-group full-width">
+
+                            <label>
+                                Additional Notes
+                            </label>
+
+                            <textarea
+                                name="notes"
+                                rows="3"
+                                placeholder="Enter any additional vehicle information..."
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Vehicle
+                        </button>
+
+                    </div>
+
+
+                </form>
+
+            </div>
+
+
+
+            <!-- VEHICLE LIST -->
+
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Registered Vehicles
+                        </h2>
+
+                        <p>
+                            Customer vehicles will appear here.
+                        </p>
+
+                    </div>
+
+
+                    <input
+                        type="search"
+                        class="table-search"
+                        placeholder="Search vehicles..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+
+                                <th>Registration</th>
+
+                                <th>Vehicle</th>
+
+                                <th>Owner</th>
+
+                                <th>Year</th>
+
+                                <th>Engine</th>
+
+                                <th>Mileage</th>
+
+                                <th>Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="vehicle-tbody">
+
+                            <tr>
+
+                                <td colspan="8"
+                                    class="table-empty">
+
+                                    Loading vehicles…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- FOOTER -->
+
+        <footer class="admin-footer">
+
+            © 2026 LEC Mechanics Management System
+
+        </footer>
+
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Spare Parts | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+            <a href="vehicles.html">🚗 Vehicles</a>
+            <a href="mechanics.html">🔧 Mechanics</a>
+            <a href="job-cards.html">📋 Job Cards</a>
+            <a href="spare-parts.html" class="active">⚙️ Spare Parts</a>
+            <a href="invoices.html">💰 Invoices</a>
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">📈 Reports</a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">🌐 View Website</a>
+            <a href="#">🚪 Logout</a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+        <!-- HEADER -->
+        <header class="admin-header">
+
+            <div>
+                <h1>Spare Parts & Inventory</h1>
+                <p>Manage spare parts and monitor stock levels.</p>
+            </div>
+
+            <div class="admin-user">
+
+                <div>
+                    <strong>Administrator</strong>
+                    <small>LEC Mechanics</small>
+                </div>
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+        <section class="admin-page-content">
+
+
+            <!-- TITLE -->
+            <div class="page-title-row">
+
+                <div>
+                    <h2>Inventory Management</h2>
+                    <p>Add, update and monitor spare parts.</p>
+                </div>
+
+            </div>
+
+
+            <!-- INVENTORY SUMMARY -->
+            <div class="dashboard-stats">
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        📦
+                    </div>
+
+                    <div>
+                        <span>Total Parts</span>
+                        <h2 id="stat-total-parts">0</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        📊
+                    </div>
+
+                    <div>
+                        <span>Stock Quantity</span>
+                        <h2 id="stat-stock-qty">0</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        ⚠️
+                    </div>
+
+                    <div>
+                        <span>Low Stock</span>
+                        <h2 id="stat-low-stock">0</h2>
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-card">
+
+                    <div class="dashboard-icon">
+                        💰
+                    </div>
+
+                    <div>
+                        <span>Inventory Value</span>
+                        <h2 id="stat-inventory-value">$0.00</h2>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ADD SPARE PART -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Add New Spare Part</h2>
+                        <p>Enter the spare part information below.</p>
+                    </div>
+
+                </div>
+
+
+                <form id="part-form">
+
+                    <div class="admin-form-grid">
+
+
+                        <!-- PART NAME -->
+                        <div class="form-group">
+
+                            <label for="partName">
+                                Part Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="partName"
+                                placeholder="e.g. Oil Filter"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- PART NUMBER -->
+                        <div class="form-group">
+
+                            <label for="partNumber">
+                                Part Number
+                            </label>
+
+                            <input
+                                type="text"
+                                id="partNumber"
+                                placeholder="e.g. OF-001"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- CATEGORY -->
+                        <div class="form-group">
+
+                            <label for="category">
+                                Category
+                            </label>
+
+                            <select id="category" required>
+
+                                <option value="">
+                                    Select category
+                                </option>
+
+                                <option value="Engine Parts">
+                                    Engine Parts
+                                </option>
+
+                                <option value="Brake System">
+                                    Brake System
+                                </option>
+
+                                <option value="Suspension">
+                                    Suspension
+                                </option>
+
+                                <option value="Electrical">
+                                    Electrical
+                                </option>
+
+                                <option value="Filters">
+                                    Filters
+                                </option>
+
+                                <option value="Transmission">
+                                    Transmission
+                                </option>
+
+                                <option value="Cooling System">
+                                    Cooling System
+                                </option>
+
+                                <option value="Other">
+                                    Other
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- SUPPLIER -->
+                        <div class="form-group">
+
+                            <label for="supplier">
+                                Supplier
+                            </label>
+
+                            <input
+                                type="text"
+                                id="supplier"
+                                placeholder="Enter supplier name"
+                            >
+
+                        </div>
+
+
+                        <!-- QUANTITY -->
+                        <div class="form-group">
+
+                            <label for="quantity">
+                                Quantity in Stock
+                            </label>
+
+                            <input
+                                type="number"
+                                id="quantity"
+                                min="0"
+                                placeholder="e.g. 20"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- MINIMUM STOCK -->
+                        <div class="form-group">
+
+                            <label for="minimumStock">
+                                Minimum Stock Level
+                            </label>
+
+                            <input
+                                type="number"
+                                id="minimumStock"
+                                min="0"
+                                placeholder="e.g. 5"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- BUYING PRICE -->
+                        <div class="form-group">
+
+                            <label for="buyingPrice">
+                                Buying Price (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="buyingPrice"
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 8.00"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- SELLING PRICE -->
+                        <div class="form-group">
+
+                            <label for="sellingPrice">
+                                Selling Price (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="sellingPrice"
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 12.00"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- LOCATION -->
+                        <div class="form-group">
+
+                            <label for="location">
+                                Storage Location
+                            </label>
+
+                            <input
+                                type="text"
+                                id="location"
+                                placeholder="e.g. Shelf A1"
+                            >
+
+                        </div>
+
+
+                        <!-- DESCRIPTION -->
+                        <div class="form-group full-width">
+
+                            <label for="description">
+                                Description / Notes
+                            </label>
+
+                            <textarea
+                                id="description"
+                                rows="4"
+                                placeholder="Enter additional information about the spare part..."
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Spare Part
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <!-- INVENTORY TABLE -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Spare Parts Inventory</h2>
+                        <p>View and manage available stock.</p>
+                    </div>
+
+                    <input
+                        type="text"
+                        class="table-search"
+                        placeholder="Search spare parts..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+                                <th>Part</th>
+                                <th>Part Number</th>
+                                <th>Category</th>
+                                <th>Supplier</th>
+                                <th>Stock</th>
+                                <th>Selling Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="part-tbody">
+
+                            <tr>
+
+                                <td colspan="9" class="table-empty">
+
+                                    Loading spare parts…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+        <footer class="admin-footer">
+
+            <p>
+                © 2026 LEC Mechanics. Admin Management System.
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

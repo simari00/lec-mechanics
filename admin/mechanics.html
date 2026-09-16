@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mechanics Management | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">📊 Dashboard</a>
+
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+
+            <a href="vehicles.html">🚗 Vehicles</a>
+
+            <a href="mechanics.html" class="active">🔧 Mechanics</a>
+
+            <a href="job-cards.html">📋 Job Cards</a>
+
+            <a href="spare-parts.html">⚙️ Spare Parts</a>
+
+            <a href="invoices.html">💰 Invoices</a>
+
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">📈 Reports</a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">🌐 View Website</a>
+
+            <a href="#">🚪 Logout</a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+        <!-- HEADER -->
+        <header class="admin-header">
+
+            <div>
+                <h1>Mechanics Management</h1>
+                <p>Manage garage mechanics and staff information.</p>
+            </div>
+
+            <div class="admin-user">
+
+                <div>
+                    <strong>Administrator</strong>
+                    <small>LEC Mechanics</small>
+                </div>
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+        <section class="admin-page-content">
+
+
+            <!-- PAGE TITLE -->
+            <div class="page-title-row">
+
+                <div>
+                    <h2>Mechanics</h2>
+                    <p>Add and manage mechanics working at the garage.</p>
+                </div>
+
+            </div>
+
+
+            <!-- ADD MECHANIC FORM -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Add New Mechanic</h2>
+                        <p>Enter the mechanic's details below.</p>
+                    </div>
+
+                </div>
+
+
+                <form id="mechanic-form">
+
+                    <div class="admin-form-grid">
+
+
+                        <!-- FIRST NAME -->
+                        <div class="form-group">
+
+                            <label for="firstName">
+                                First Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="firstName"
+                                placeholder="Enter first name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- LAST NAME -->
+                        <div class="form-group">
+
+                            <label for="lastName">
+                                Last Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="lastName"
+                                placeholder="Enter last name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- PHONE -->
+                        <div class="form-group">
+
+                            <label for="phone">
+                                Phone Number
+                            </label>
+
+                            <input
+                                type="tel"
+                                id="phone"
+                                placeholder="Enter phone number"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- EMAIL -->
+                        <div class="form-group">
+
+                            <label for="email">
+                                Email Address
+                            </label>
+
+                            <input
+                                type="email"
+                                id="email"
+                                placeholder="Enter email address"
+                            >
+
+                        </div>
+
+
+                        <!-- STAFF ID -->
+                        <div class="form-group">
+
+                            <label for="staffId">
+                                Employee / Staff ID
+                            </label>
+
+                            <input
+                                type="text"
+                                id="staffId"
+                                placeholder="e.g. LEC-MEC-001"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- SPECIALIZATION -->
+                        <div class="form-group">
+
+                            <label for="specialization">
+                                Specialization
+                            </label>
+
+                            <select id="specialization" required>
+
+                                <option value="">
+                                    Select specialization
+                                </option>
+
+                                <option value="General Mechanic">
+                                    General Mechanic
+                                </option>
+
+                                <option value="Auto Electrician">
+                                    Auto Electrician
+                                </option>
+
+                                <option value="Diagnostic Technician">
+                                    Diagnostic Technician
+                                </option>
+
+                                <option value="Engine Specialist">
+                                    Engine Specialist
+                                </option>
+
+                                <option value="Suspension and Brake Technician">
+                                    Suspension & Brake Technician
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- EXPERIENCE -->
+                        <div class="form-group">
+
+                            <label for="experience">
+                                Years of Experience
+                            </label>
+
+                            <input
+                                type="number"
+                                id="experience"
+                                min="0"
+                                placeholder="e.g. 5"
+                            >
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="form-group">
+
+                            <label for="status">
+                                Employment Status
+                            </label>
+
+                            <select id="status">
+
+                                <option value="Active">
+                                    Active
+                                </option>
+
+                                <option value="Inactive">
+                                    Inactive
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ADDRESS -->
+                        <div class="form-group full-width">
+
+                            <label for="address">
+                                Address
+                            </label>
+
+                            <input
+                                type="text"
+                                id="address"
+                                placeholder="Enter mechanic's address"
+                            >
+
+                        </div>
+
+
+                        <!-- NOTES -->
+                        <div class="form-group full-width">
+
+                            <label for="notes">
+                                Additional Notes
+                            </label>
+
+                            <textarea
+                                id="notes"
+                                rows="4"
+                                placeholder="Enter any additional information..."
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Mechanic
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+
+            <!-- MECHANICS LIST -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Mechanics List</h2>
+                        <p>Registered mechanics and their information.</p>
+                    </div>
+
+                    <input
+                        type="text"
+                        class="table-search"
+                        placeholder="Search mechanics..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+
+                                <th>Mechanic</th>
+
+                                <th>Staff ID</th>
+
+                                <th>Phone</th>
+
+                                <th>Specialization</th>
+
+                                <th>Experience</th>
+
+                                <th>Status</th>
+
+                                <th>Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="mechanic-tbody">
+
+                            <tr>
+
+                                <td colspan="8" class="table-empty">
+
+                                    Loading mechanics…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+        <footer class="admin-footer">
+
+            <p>
+                © 2026 LEC Mechanics. Admin Management System.
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

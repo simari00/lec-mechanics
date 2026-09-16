@@ -1,0 +1,26 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node@5",
+      "maxDuration": 15
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 */6 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/api/",
+      "destination": "/api/index"
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}

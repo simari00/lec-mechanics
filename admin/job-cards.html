@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Job Cards | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+            LEC <span>MECHANICS</span>
+            <small>ADMIN PANEL</small>
+        </div>
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">📊 Dashboard</a>
+
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">👥 Customers</a>
+
+            <a href="vehicles.html">🚗 Vehicles</a>
+
+            <a href="mechanics.html">🔧 Mechanics</a>
+
+            <a href="job-cards.html" class="active">📋 Job Cards</a>
+
+            <a href="spare-parts.html">⚙️ Spare Parts</a>
+
+            <a href="invoices.html">💰 Invoices</a>
+
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">📈 Reports</a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">🌐 View Website</a>
+
+            <a href="#">🚪 Logout</a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+
+        <!-- HEADER -->
+        <header class="admin-header">
+
+            <div>
+                <h1>Job Cards</h1>
+                <p>Create and manage vehicle repair jobs.</p>
+            </div>
+
+            <div class="admin-user">
+
+                <div>
+                    <strong>Administrator</strong>
+                    <small>LEC Mechanics</small>
+                </div>
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- PAGE CONTENT -->
+        <section class="admin-page-content">
+
+
+            <!-- TITLE -->
+            <div class="page-title-row">
+
+                <div>
+                    <h2>Job Card Management</h2>
+                    <p>Record vehicle problems, repairs and job progress.</p>
+                </div>
+
+            </div>
+
+
+            <!-- CREATE JOB CARD -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Create New Job Card</h2>
+                        <p>Enter the details of the vehicle repair job.</p>
+                    </div>
+
+                </div>
+
+
+                <form id="jobcard-form">
+
+                    <div class="admin-form-grid">
+
+
+                        <!-- JOB CARD NUMBER -->
+                        <div class="form-group">
+
+                            <label for="jobNumber">
+                                Job Card Number
+                            </label>
+
+                            <input
+                                type="text"
+                                id="jobNumber"
+                                placeholder="e.g. JC-0001"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- JOB DATE -->
+                        <div class="form-group">
+
+                            <label for="jobDate">
+                                Job Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="jobDate"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- CUSTOMER -->
+                        <div class="form-group">
+
+                            <label for="customer">
+                                Customer
+                            </label>
+
+                            <select id="customer" name="customer" required>
+
+                                <option value="">
+                                    Select customer
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- VEHICLE -->
+                        <div class="form-group">
+
+                            <label for="vehicle">
+                                Vehicle
+                            </label>
+
+                            <select id="vehicle" name="vehicle" required>
+
+                                <option value="">
+                                    Select vehicle
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- MECHANIC -->
+                        <div class="form-group">
+
+                            <label for="mechanic">
+                                Assigned Mechanic
+                            </label>
+
+                            <select id="mechanic" name="mechanic">
+
+                                <option value="">
+                                    Select mechanic
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- PRIORITY -->
+                        <div class="form-group">
+
+                            <label for="priority">
+                                Job Priority
+                            </label>
+
+                            <select id="priority" name="priority">
+
+                                <option value="Normal">
+                                    Normal
+                                </option>
+
+                                <option value="High">
+                                    High
+                                </option>
+
+                                <option value="Urgent">
+                                    Urgent
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- CURRENT MILEAGE -->
+                        <div class="form-group">
+
+                            <label for="mileage">
+                                Current Mileage (km)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="mileage"
+                                placeholder="e.g. 125000"
+                            >
+
+                        </div>
+
+
+                        <!-- ESTIMATED COMPLETION -->
+                        <div class="form-group">
+
+                            <label for="completionDate">
+                                Estimated Completion Date
+                            </label>
+
+                            <input
+                                type="date"
+                                id="completionDate"
+                            >
+
+                        </div>
+
+
+                        <!-- CUSTOMER COMPLAINT -->
+                        <div class="form-group full-width">
+
+                            <label for="complaint">
+                                Customer Complaint / Reported Problem
+                            </label>
+
+                            <textarea
+                                id="complaint"
+                                rows="4"
+                                placeholder="Describe the problem reported by the customer..."
+                                required
+                            ></textarea>
+
+                        </div>
+
+
+                        <!-- DIAGNOSIS -->
+                        <div class="form-group full-width">
+
+                            <label for="diagnosis">
+                                Diagnosis / Inspection Findings
+                            </label>
+
+                            <textarea
+                                id="diagnosis"
+                                rows="4"
+                                placeholder="Enter the mechanic's diagnosis and inspection findings..."
+                            ></textarea>
+
+                        </div>
+
+
+                        <!-- WORK REQUIRED -->
+                        <div class="form-group full-width">
+
+                            <label for="workRequired">
+                                Work Required
+                            </label>
+
+                            <textarea
+                                id="workRequired"
+                                rows="4"
+                                placeholder="Describe the repairs or services required..."
+                            ></textarea>
+
+                        </div>
+
+
+                        <!-- WORK COMPLETED -->
+                        <div class="form-group full-width">
+
+                            <label for="workCompleted">
+                                Work Completed
+                            </label>
+
+                            <textarea
+                                id="workCompleted"
+                                rows="4"
+                                placeholder="Record work performed on the vehicle..."
+                            ></textarea>
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="form-group">
+
+                            <label for="status">
+                                Job Status
+                            </label>
+
+                            <select id="status">
+
+                                <option value="Pending">
+                                    Pending
+                                </option>
+
+                                <option value="In Progress">
+                                    In Progress
+                                </option>
+
+                                <option value="Awaiting Parts">
+                                    Awaiting Parts
+                                </option>
+
+                                <option value="Completed">
+                                    Completed
+                                </option>
+
+                                <option value="Cancelled">
+                                    Cancelled
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ESTIMATED COST -->
+                        <div class="form-group">
+
+                            <label for="estimatedCost">
+                                Estimated Cost (USD)
+                            </label>
+
+                            <input
+                                type="number"
+                                id="estimatedCost"
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 150.00"
+                            >
+
+                        </div>
+
+
+                        <!-- NOTES -->
+                        <div class="form-group full-width">
+
+                            <label for="notes">
+                                Additional Notes
+                            </label>
+
+                            <textarea
+                                id="notes"
+                                rows="3"
+                                placeholder="Enter any additional notes..."
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- BUTTONS -->
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Job Card
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <!-- JOB CARD LIST -->
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Job Card List</h2>
+                        <p>View and manage vehicle repair jobs.</p>
+                    </div>
+
+                    <input
+                        type="text"
+                        class="table-search"
+                        placeholder="Search job cards..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>#</th>
+
+                                <th>Job Card</th>
+
+                                <th>Vehicle</th>
+
+                                <th>Customer</th>
+
+                                <th>Mechanic</th>
+
+                                <th>Date</th>
+
+                                <th>Status</th>
+
+                                <th>Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="jobcard-tbody">
+
+                            <tr>
+
+                                <td colspan="8" class="table-empty">
+
+                                    Loading job cards…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+        <footer class="admin-footer">
+
+            <p>
+                © 2026 LEC Mechanics. Admin Management System.
+            </p>
+
+        </footer>
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+
+            <span>LEC</span> MECHANICS
+
+            <small>GARAGE MANAGEMENT</small>
+
+        </div>
+
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html" class="active">
+                📊 Dashboard
+            </a>
+
+            <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">
+                👥 Customers
+            </a>
+
+            <a href="vehicles.html">
+                🚗 Vehicles
+            </a>
+
+            <a href="mechanics.html">
+                🔧 Mechanics
+            </a>
+
+            <a href="job-cards.html">
+                📝 Job Cards
+            </a>
+
+            <a href="spare-parts.html">
+                📦 Spare Parts
+            </a>
+
+            <a href="invoices.html">
+                💰 Invoices
+            </a>
+
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">
+                📈 Reports
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">
+                🌐 View Website
+            </a>
+
+            <a href="#">
+                ⚙️ Settings
+            </a>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="admin-main">
+
+
+        <!-- TOP BAR -->
+
+        <header class="admin-header">
+
+            <div>
+
+                <h1>
+                    Dashboard
+                </h1>
+
+                <p>
+                    Welcome to LEC Mechanics Management System
+                </p>
+
+            </div>
+
+
+            <div class="admin-user">
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+                <div>
+
+                    <strong>
+                        Administrator
+                    </strong>
+
+                    <small>
+                        Garage Manager
+                    </small>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- STATISTICS -->
+
+        <section class="dashboard-stats">
+
+
+            <div class="dashboard-card">
+
+                <div class="dashboard-icon">
+                    👥
+                </div>
+
+                <div>
+
+                    <span>
+                        Total Customers
+                    </span>
+
+                    <h2 id="stat-customers">
+                        0
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="dashboard-card">
+
+                <div class="dashboard-icon">
+                    🚗
+                </div>
+
+                <div>
+
+                    <span>
+                        Vehicles
+                    </span>
+
+                    <h2 id="stat-vehicles">
+                        0
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="dashboard-card">
+
+                <div class="dashboard-icon">
+                    🔧
+                </div>
+
+                <div>
+
+                    <span>
+                        Active Jobs
+                    </span>
+
+                    <h2 id="stat-jobs">
+                        0
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="dashboard-card">
+
+                <div class="dashboard-icon">
+                    💰
+                </div>
+
+                <div>
+
+                    <span>
+                        Revenue
+                    </span>
+
+                    <h2 id="stat-revenue">
+                        $0.00
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- DASHBOARD CONTENT -->
+
+        <section class="dashboard-grid">
+
+
+            <!-- RECENT JOBS -->
+
+            <div class="dashboard-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Recent Job Cards
+                        </h2>
+
+                        <p>
+                            Latest vehicle repair jobs
+                        </p>
+
+                    </div>
+
+                    <a href="job-cards.html">
+                        View All
+                    </a>
+
+                </div>
+
+
+                <div class="empty-state" id="recent-jobs-empty">
+
+                    <div class="empty-icon">
+                        📝
+                    </div>
+
+                    <h3>
+                        No Job Cards Yet
+                    </h3>
+
+                    <p>
+                        Vehicle repair jobs will appear here.
+                    </p>
+
+                    <a href="job-cards.html" class="admin-button">
+                        Create Job Card
+                    </a>
+
+                </div>
+
+                <div class="table-container" hidden>
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Job #</th>
+
+                                <th>Customer</th>
+
+                                <th>Vehicle</th>
+
+                                <th>Date</th>
+
+                                <th>Status</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="recent-jobs-tbody"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- QUICK ACTIONS -->
+
+            <div class="dashboard-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Quick Actions
+                        </h2>
+
+                        <p>
+                            Common garage operations
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="quick-actions">
+
+                    <a href="service-requests.html">📥 Requests</a>
+
+            <a href="customers.html">
+
+                        <span>👤</span>
+
+                        <div>
+
+                            <strong>
+                                Add Customer
+                            </strong>
+
+                            <small>
+                                Register a new customer
+                            </small>
+
+                        </div>
+
+                    </a>
+
+
+                    <a href="vehicles.html">
+
+                        <span>🚗</span>
+
+                        <div>
+
+                            <strong>
+                                Add Vehicle
+                            </strong>
+
+                            <small>
+                                Register a customer's vehicle
+                            </small>
+
+                        </div>
+
+                    </a>
+
+
+                    <a href="job-cards.html">
+
+                        <span>📝</span>
+
+                        <div>
+
+                            <strong>
+                                Create Job Card
+                            </strong>
+
+                            <small>
+                                Start a new repair job
+                            </small>
+
+                        </div>
+
+                    </a>
+
+
+                    <a href="invoices.html">
+
+                        <span>💰</span>
+
+                        <div>
+
+                            <strong>
+                                Create Invoice
+                            </strong>
+
+                            <small>
+                                Generate a customer invoice
+                            </small>
+
+                        </div>
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- SYSTEM OVERVIEW -->
+
+        <section class="dashboard-panel system-overview">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Garage Overview
+                    </h2>
+
+                    <p>
+                        Current system status
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="overview-items">
+
+                <div>
+
+                    <span class="status-dot"></span>
+
+                    <div>
+
+                        <strong>
+                            Customer Management
+                        </strong>
+
+                        <small>
+                            Ready
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <span class="status-dot"></span>
+
+                    <div>
+
+                        <strong>
+                            Vehicle Management
+                        </strong>
+
+                        <small>
+                            Ready
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <span class="status-dot"></span>
+
+                    <div>
+
+                        <strong>
+                            Job Management
+                        </strong>
+
+                        <small>
+                            Ready
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div>
+
+                    <span class="status-dot"></span>
+
+                    <div>
+
+                        <strong>
+                            Inventory
+                        </strong>
+
+                        <small>
+                            Ready
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- FOOTER -->
+
+        <footer class="admin-footer">
+
+            © 2026 LEC Mechanics Management System
+
+        </footer>
+
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+
+</html>

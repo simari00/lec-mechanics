@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Customers | LEC Mechanics</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="admin-body">
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="admin-logo">
+
+            <span>LEC</span> MECHANICS
+
+            <small>GARAGE MANAGEMENT</small>
+
+        </div>
+
+
+        <nav class="sidebar-menu">
+
+            <a href="dashboard.html">
+                📊 Dashboard
+            </a>
+
+            <a href="service-requests.html">
+                📥 Requests
+            </a>
+
+            <a href="customers.html" class="active">
+                👥 Customers
+            </a>
+
+            <a href="vehicles.html">
+                🚗 Vehicles
+            </a>
+
+            <a href="mechanics.html">
+                🔧 Mechanics
+            </a>
+
+            <a href="job-cards.html">
+                📝 Job Cards
+            </a>
+
+            <a href="spare-parts.html">
+                📦 Spare Parts
+            </a>
+
+            <a href="invoices.html">
+                💰 Invoices
+            </a>
+
+            <a href="gallery.html">🖼️ Gallery</a>
+            <a href="reports.html">
+                📈 Reports
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <a href="../index.html">
+                🌐 View Website
+            </a>
+
+            <a href="#">
+                ⚙️ Settings
+            </a>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- MAIN CONTENT -->
+
+    <main class="admin-main">
+
+
+        <!-- HEADER -->
+
+        <header class="admin-header">
+
+            <div>
+
+                <h1>
+                    Customers
+                </h1>
+
+                <p>
+                    Manage LEC Mechanics customers
+                </p>
+
+            </div>
+
+
+            <div class="admin-user">
+
+                <div class="user-avatar">
+                    A
+                </div>
+
+                <div>
+
+                    <strong>
+                        Administrator
+                    </strong>
+
+                    <small>
+                        Garage Manager
+                    </small>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- PAGE CONTENT -->
+
+        <section class="admin-page-content">
+
+
+            <!-- PAGE TITLE -->
+
+            <div class="page-title-row">
+
+                <div>
+
+                    <h2>
+                        Customer Management
+                    </h2>
+
+                    <p>
+                        Register and manage vehicle owners.
+                    </p>
+
+                </div>
+
+                <button class="admin-primary-button">
+                    + Add Customer
+                </button>
+
+            </div>
+
+
+
+            <!-- CUSTOMER FORM -->
+
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Add New Customer
+                        </h2>
+
+                        <p>
+                            Enter customer information below.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form id="customer-form">
+
+
+                    <div class="admin-form-grid">
+
+
+                        <div class="form-group">
+
+                            <label>
+                                First Name
+                            </label>
+
+                            <input
+                                type="text"
+                                name="first_name"
+                                placeholder="Enter first name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Last Name
+                            </label>
+
+                            <input
+                                type="text"
+                                name="last_name"
+                                placeholder="Enter last name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Phone Number
+                            </label>
+
+                            <input
+                                type="tel"
+                                name="phone"
+                                placeholder="Enter phone number"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Email Address
+                            </label>
+
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Enter email address"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                National ID
+                            </label>
+
+                            <input
+                                type="text"
+                                name="national_id"
+                                placeholder="Enter ID number"
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Customer Type
+                            </label>
+
+                            <select name="customer_type">
+
+                                <option value="Individual">
+                                    Individual
+                                </option>
+
+                                <option value="Company">
+                                    Company
+                                </option>
+
+                                <option value="Fleet Customer">
+                                    Fleet Customer
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-group full-width">
+
+                            <label>
+                                Address
+                            </label>
+
+                            <textarea
+                                name="address"
+                                rows="3"
+                                placeholder="Enter customer address"
+                            ></textarea>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="form-buttons">
+
+                        <button
+                            type="reset"
+                            class="cancel-button"
+                        >
+                            Clear
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="admin-primary-button"
+                        >
+                            Save Customer
+                        </button>
+
+                    </div>
+
+
+                </form>
+
+            </div>
+
+
+
+            <!-- CUSTOMER LIST -->
+
+            <div class="admin-form-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            Customer List
+                        </h2>
+
+                        <p>
+                            Registered customers will appear here.
+                        </p>
+
+                    </div>
+
+
+                    <input
+                        type="search"
+                        class="table-search"
+                        placeholder="Search customers..."
+                    >
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    #
+                                </th>
+
+                                <th>
+                                    Customer
+                                </th>
+
+                                <th>
+                                    Phone
+                                </th>
+
+                                <th>
+                                    Email
+                                </th>
+
+                                <th>
+                                    Type
+                                </th>
+
+                                <th>
+                                    Actions
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="customer-tbody">
+
+                            <tr>
+
+                                <td colspan="6"
+                                    class="table-empty">
+
+                                    Loading customers…
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- FOOTER -->
+
+        <footer class="admin-footer">
+
+            © 2026 LEC Mechanics Management System
+
+        </footer>
+
+
+    </main>
+
+
+    <script src="../js/admin.js"></script>
+
+    <script src="../js/script.js"></script>
+</body>
+
+</html>
