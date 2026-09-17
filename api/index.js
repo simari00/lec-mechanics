@@ -603,6 +603,55 @@ module.exports = async (req, res) => {
         return json(res, { success: true, message: 'Password changed.' });
       }
 
+      // Update account details. Every authenticated admin can change their OWN
+      // name and email; the master can additionally edit any other account.
+      if (action === 'update-profile' && method === 'POST') {
+        const user = await requireAuth(req, res); if (!user) return;
+        const targetId = Number(body.id) || user.id; // master may target others; everyone else targets self
+        if (targetId !== user.id && user.role !== 'master') {
+          return fail(res, 'You can only edit your own details. Ask the master admin to change other accounts.', 403);
+        }
+        const newName = (body.full_name || '').trim();
+        const newEmail = (body.email || '').toLowerCase().trim();
+        if (!newName || newName.length < 3) return fail(res, 'A full name of at least 3 characters is required.', 422);
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) return fail(res, 'A valid email address is required.', 422);
+        const target = await db().query('SELECT id, email, role, approval_status FROM users WHERE id = $1', [targetId]);
+        if (!target.rows.length) return fail(res, 'Account not found.', 404);
+        // Never lock a master out by demoting/duplicating the only master account.
+        if (target.rows[0].role === 'master' && body.role && body.role !== 'master') {
+          return fail(res, 'The master role cannot be changed.', 400);
+        }
+        const dupe = await db().query('SELECT 1 FROM users WHERE email = $1 AND id <> $2', [newEmail, targetId]);
+        if (dupe.rows.length) return fail(res, 'Another account already uses this email address.', 409);
+        // Role changes are master-only and only downwards (admin ↔ admin).
+        let roleChange = null;
+        if (body.role && body.role !== target.rows[0].role) {
+          if (user.role !== 'master') return fail(res, 'Only the master admin can change roles.', 403);
+          if (target.rows[0].role === 'master') return fail(res, 'The master role cannot be changed.', 400);
+          if (!['admin', 'master'].includes(body.role)) return fail(res, 'Role must be admin or master.', 422);
+          if (body.role === 'master') {
+            const masters = await db().query("SELECT COUNT(*)::int AS n FROM users WHERE role = 'master'");
+            if (masters.rows[0].n >= 1) return fail(res, 'There can only be one master account.', 409);
+          }
+          roleChange = body.role;
+        }
+        if (roleChange) {
+          await db().query('UPDATE users SET full_name = $1, email = $2, role = $3 WHERE id = $4',
+            [newName, newEmail, roleChange, targetId]);
+        } else {
+          await db().query('UPDATE users SET full_name = $1, email = $2 WHERE id = $3', [newName, newEmail, targetId]);
+        }
+        await logActivity(db(), 'update', 'users', targetId,
+          `Account details updated${targetId !== user.id ? ' by master' : ''}: ${newName} <${newEmail}>${roleChange ? ' role=' + roleChange : ''}`, user);
+        // If an admin changed their own email, refresh the session so the header shows the new name.
+        if (targetId === user.id) {
+          setSessionCookie(res, signToken({ id: targetId, full_name: newName, email: newEmail, role: roleChange || target.rows[0].role }));
+        }
+        return json(res, { success: true, message: targetId === user.id
+          ? 'Your details were updated.' + (targetId === user.id && newEmail !== user.email ? ' Use the new email next time you sign in.' : '')
+          : 'Account details updated.' });
+      }
+
       if (action === 'login' && method === 'POST') {
         const email = (body.email || '').toLowerCase().trim();
         const attemptRow = await loginAttemptRow(email);

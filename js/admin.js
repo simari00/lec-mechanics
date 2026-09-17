@@ -516,6 +516,33 @@
                 '<div id="lec-sec-admin-list" style="margin:0 0 18px;"><em style="color:#999;font-size:13px;">Loading accounts…</em></div>' +
                 '<div id="lec-sec-pending" style="margin:0 0 18px;"></div>' +
 
+                /* --- my details (every admin) --- */
+                '<form id="lec-sec-profile-form" style="border-top:1px solid #eee;padding-top:16px;">' +
+                '<h3 style="margin:0 0 8px;font-size:15px;">My details</h3>' +
+                '<p style="margin:0 0 10px;color:#777;font-size:12px;">Change your display name and sign-in email.</p>' +
+                '<label style="' + labelStyle() + '">Full name</label>' +
+                '<input id="lec-sec-profile-name" type="text" value="' + esc((me.user && me.user.full_name) || '') + '" style="' + inputStyle() + '">' +
+                '<label style="' + labelStyle() + '">Email</label>' +
+                '<input id="lec-sec-profile-email" type="email" value="' + esc((me.user && me.user.email) || '') + '" style="' + inputStyle() + '">' +
+                '<button type="submit" style="margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Save my details</button>' +
+                '</form>' +
+
+                /* --- edit another account (master only) --- */
+                '<div id="lec-sec-edit-others" style="display:none;border-top:1px solid #eee;margin-top:18px;padding-top:16px;">' +
+                '<h3 style="margin:0 0 8px;font-size:15px;">Edit account</h3>' +
+                '<p id="lec-sec-edit-target" style="margin:0 0 10px;color:#777;font-size:12px;"></p>' +
+                '<label style="' + labelStyle() + '">Full name</label>' +
+                '<input id="lec-sec-edit-name" type="text" style="' + inputStyle() + '">' +
+                '<label style="' + labelStyle() + '">Email</label>' +
+                '<input id="lec-sec-edit-email" type="email" style="' + inputStyle() + '">' +
+                '<label style="' + labelStyle() + '">Role</label>' +
+                '<select id="lec-sec-edit-role" style="' + inputStyle() + '"><option value="admin">Admin</option><option value="master">Master</option></select>' +
+                '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                '<button type="button" id="lec-sec-edit-save" style="padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Save changes</button>' +
+                '<button type="button" id="lec-sec-edit-cancel" style="padding:10px 16px;border:1px solid #bbb;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;">Cancel</button>' +
+                '</div>' +
+                '</div>' +
+
                 /* --- security question --- */
                 '<form id="lec-sec-question-form" style="border-top:1px solid #eee;padding-top:16px;">' +
                 '<h3 style="margin:0 0 8px;font-size:15px;">Security question</h3>' +
@@ -639,9 +666,7 @@
                         } else {
                             pendingBox.innerHTML = '';
                         }
-                    }
-
-                    container.innerHTML =
+                    }                    container.innerHTML =
                         '<div style="border:1px solid #eee;border-radius:10px;overflow:hidden;">' +
                         rows.map(function (row) {
                             var isCurrent = row.id === result.current_user_id;
@@ -650,8 +675,16 @@
                                 : (row.approval_status === 'rejected'
                                     ? '<span style="color:#c0392b;font-weight:700;">rejected</span>'
                                     : (row.role === 'master' ? '<span style="color:#8e44ad;font-weight:700;">★ master</span>' : 'Active'));
-                            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;' +
-                                'border-bottom:1px solid #eee;font-size:13px;' + (isCurrent ? 'background:#f6f9ff;' : '') + '">' +
+                            // Master can edit any account; others only their own (via the form above).
+                            var canEdit = result.is_master || isCurrent;
+                            var editBtn = canEdit && row.approval_status === 'approved'
+                                ? '<button type="button" class="lec-edit-user" data-id="' + row.id + '" '
+                                  + 'data-name="' + esc(row.full_name) + '" data-email="' + esc(row.email) + '" data-role="' + esc(row.role) + '" '
+                                  + 'title="Edit name, email' + (result.is_master ? ' and role' : '') + '" '
+                                  + 'style="padding:4px 10px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">✎ Edit</button>'
+                                : '';
+                            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'
+                                + 'border-bottom:1px solid #eee;font-size:13px;' + (isCurrent ? 'background:#f6f9ff;' : '') + '">' +
                                 '<div>' +
                                 '<strong>' + esc(row.full_name) + (isCurrent ? ' <span style="color:#2980b9;font-size:11px;">(you)</span>' : '') + '</strong>' +
                                 '<div style="color:#777;font-size:12px;">' + esc(row.email) + '</div>' +
@@ -660,10 +693,29 @@
                                 statusLabel +
                                 '<div style="color:' + (Number(row.has_security_question) ? '#1e8e3e' : '#e67e22') + ';">' +
                                 (Number(row.has_security_question) ? '✓ recovery set' : '⚠ no recovery') + '</div>' +
+                                (editBtn ? '<div style="margin-top:6px;">' + editBtn + '</div>' : '') +
                                 '</div>' +
                                 '</div>';
                         }).join('') +
                         '</div>';
+
+                    // Master: clicking ✎ fills the edit-another-account form.
+                    container.querySelectorAll('.lec-edit-user').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            var box = overlay.querySelector('#lec-sec-edit-others');
+                            box.style.display = 'block';
+                            overlay.querySelector('#lec-sec-edit-name').value = btn.getAttribute('data-name');
+                            overlay.querySelector('#lec-sec-edit-email').value = btn.getAttribute('data-email');
+                            var roleSel = overlay.querySelector('#lec-sec-edit-role');
+                            roleSel.value = btn.getAttribute('data-role');
+                            roleSel.disabled = btn.getAttribute('data-role') === 'master'; // master role is fixed
+                            overlay.querySelector('#lec-sec-edit-target').innerHTML =
+                                'Editing <strong>' + esc(btn.getAttribute('data-name')) + '</strong> — update the name, email' +
+                                (result.is_master && btn.getAttribute('data-role') !== 'master' ? ' or role' : '') + '.';
+                            box.setAttribute('data-id', btn.getAttribute('data-id'));
+                            box.scrollIntoView({ block: 'nearest' });
+                        });
+                    });
                 }).catch(function (error) {
                     var container = overlay.querySelector('#lec-sec-admin-list');
                     if (container) container.innerHTML = '<em style="color:#c0392b;font-size:13px;">' + esc(error.message) + '</em>';
@@ -730,6 +782,52 @@
                     }).catch(function (e) { msg(e.message, true); });
                 });
             }
+
+            // My details (every admin edits their own name/email).
+            overlay.querySelector('#lec-sec-profile-form').addEventListener('submit', function (event) {
+                event.preventDefault();
+                api('auth', {
+                    method: 'POST',
+                    action: 'update-profile',
+                    body: {
+                        full_name: overlay.querySelector('#lec-sec-profile-name').value.trim(),
+                        email: overlay.querySelector('#lec-sec-profile-email').value.trim()
+                    }
+                }).then(function (r) {
+                    msg(r.message || 'Details updated.');
+                    renderAdminList();
+                    // Refresh the header name/role without a reload.
+                    api('auth', { action: 'me' }).then(function (updated) {
+                        if (updated.user) setUser(updated.user);
+                    }).catch(function () {});
+                }).catch(function (e) { msg(e.message, true); });
+            });
+
+            // Master editing another account.
+            var editBox = overlay.querySelector('#lec-sec-edit-others');
+            overlay.querySelector('#lec-sec-edit-cancel').addEventListener('click', function () {
+                editBox.style.display = 'none';
+                editBox.removeAttribute('data-id');
+            });
+            overlay.querySelector('#lec-sec-edit-save').addEventListener('click', function () {
+                var targetId = Number(editBox.getAttribute('data-id'));
+                if (!targetId) { msg('Pick an account with ✎ Edit first.', true); return; }
+                api('auth', {
+                    method: 'POST',
+                    action: 'update-profile',
+                    body: {
+                        id: targetId,
+                        full_name: overlay.querySelector('#lec-sec-edit-name').value.trim(),
+                        email: overlay.querySelector('#lec-sec-edit-email').value.trim(),
+                        role: overlay.querySelector('#lec-sec-edit-role').value
+                    }
+                }).then(function (r) {
+                    msg(r.message || 'Account updated.');
+                    editBox.style.display = 'none';
+                    editBox.removeAttribute('data-id');
+                    renderAdminList();
+                }).catch(function (e) { msg(e.message, true); });
+            });
 
             overlay.querySelector('#lec-sec-password-form').addEventListener('submit', function (event) {
                 event.preventDefault();
