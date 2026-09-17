@@ -475,7 +475,7 @@
             if (event.key === 'ArrowRight') show(currentIndex + 1);
         }
 
-        function open(img, groupImages) {
+        function open(img, groupImages, fullSrcs) {
             // Collect the clickable images in the same grid for prev/next browsing.
             currentList = groupImages.map(function (el) {
                 var fig = el.closest('figure');
@@ -511,6 +511,9 @@
             captionBox.querySelector('span').style.cssText = 'opacity:.7;';
             document.body.appendChild(overlay);
             document.body.style.overflow = 'hidden';
+            // Full-size URLs must be set BEFORE the first show() so the opening
+            // photo is the full image, not its thumbnail.
+            overlay.__fullSrcs = fullSrcs || null;
 
             show(startIndex);
 
@@ -593,12 +596,9 @@
                 return { el: el, data: copy };
             });
             var idx = group.findIndex(function (g) { return g.el === img; });
-            open(img, group.map(function (g, i) {
-                // keep DOM order mapping for show(); the lightbox reads .src later
-                return g.data;
-            }));
-            // store upgraded srcs for navigation
-            overlay.__fullSrcs = group.map(function (g) { return g.data.src; });
+            // open() needs the actual <img> elements (for captions) plus the
+            // upgraded full-size URLs for crisp full-screen viewing.
+            open(img, group.map(function (g) { return g.el; }), group.map(function (g) { return g.data.src; }));
         });
     })();
 
