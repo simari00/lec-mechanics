@@ -431,6 +431,7 @@
                 }
                 if (result.csrf_token) setCsrfToken(result.csrf_token);
                 overlay.remove();
+                if (markAdminUnlocked) markAdminUnlocked(); // explicit login unlocks the panel
                 setUser(result.user);
                 boot();
             }).catch(function (error) {
@@ -2393,17 +2394,16 @@
             forceRelogin();
         };
 
-        // After a successful login, mark the panel as unlocked.
-        var originalSetUser = setUser;
-        setUser = function (user) {
-            if (user) markUnlocked();
-            originalSetUser(user);
-        };
+        // Expose unlock for the login form (session restore must NOT unlock).
+        markAdminUnlocked = markUnlocked;
     }
 
+    var markAdminUnlocked = null;
     installReauthLock();
 
-    /* ================= boot ================= */    function boot() {
+    /* ================= boot ================= */
+
+    function boot() {
         wireLogout();
         if ($('stat-customers')) return dashboardPage();
         if ($('sr-tbody')) return serviceRequestsPage();
