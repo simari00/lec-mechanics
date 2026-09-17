@@ -411,6 +411,118 @@
         });
     }
 
+    /* ---------------- PHOTO LIGHTBOX (gallery + homepage grid) ---------------- */
+
+    (function buildLightbox() {
+        if (document.body.classList.contains('admin-body')) return;
+
+        var overlay = null;
+        var currentList = [];
+        var currentIndex = 0;
+
+        function esc(v) {
+            return String(v === null || v === undefined ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function close() {
+            if (overlay) { overlay.remove(); overlay = null; }
+            document.removeEventListener('keydown', onKey);
+        }
+
+        function show(index) {
+            if (!overlay || !currentList.length) return;
+            currentIndex = (index + currentList.length) % currentList.length;
+            var item = currentList[currentIndex];
+            overlay.querySelector('#lec-lb-img').src = item.src;
+            overlay.querySelector('#lec-lb-img').alt = item.alt;
+            overlay.querySelector('#lec-lb-caption').innerHTML =
+                '<strong>' + esc(item.title) + '</strong>' +
+                (item.caption ? '<span>' + esc(item.caption) + '</span>' : '');
+            overlay.querySelector('#lec-lb-count').textContent =
+                (currentIndex + 1) + ' / ' + currentList.length;
+            var prev = overlay.querySelector('#lec-lb-prev');
+            var next = overlay.querySelector('#lec-lb-next');
+            var many = currentList.length > 1;
+            prev.style.display = many ? '' : 'none';
+            next.style.display = many ? '' : 'none';
+        }
+
+        function onKey(event) {
+            if (!overlay) return;
+            if (event.key === 'Escape') close();
+            if (event.key === 'ArrowLeft') show(currentIndex - 1);
+            if (event.key === 'ArrowRight') show(currentIndex + 1);
+        }
+
+        function open(img, groupImages) {
+            // Collect the clickable images in the same grid for prev/next browsing.
+            currentList = groupImages.map(function (el) {
+                var fig = el.closest('figure');
+                var cap = fig ? fig.querySelector('figcaption') : null;
+                return {
+                    src: el.src,
+                    alt: el.alt || '',
+                    title: cap && cap.querySelector('strong') ? cap.querySelector('strong').textContent : (el.alt || 'Photo'),
+                    caption: cap && cap.querySelector('span') ? cap.querySelector('span').textContent : ''
+                };
+            });
+            var startIndex = Math.max(groupImages.indexOf(img), 0);
+
+            overlay = document.createElement('div');
+            overlay.id = 'lec-lightbox';
+            overlay.style.cssText =
+                'position:fixed;inset:0;z-index:10000;background:rgba(5,8,14,.92);' +
+                'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;';
+            overlay.innerHTML =
+                '<button type="button" id="lec-lb-close" aria-label="Close" ' +
+                    'style="position:absolute;top:14px;right:18px;border:0;background:none;color:#fff;font-size:32px;cursor:pointer;line-height:1;">&times;</button>' +
+                '<span id="lec-lb-count" style="position:absolute;top:20px;left:22px;color:rgba(255,255,255,.65);font-size:13px;letter-spacing:1px;"></span>' +
+                '<button type="button" id="lec-lb-prev" aria-label="Previous photo" ' +
+                    'style="position:absolute;left:14px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.12);color:#fff;font-size:26px;padding:14px 16px;border-radius:50%;cursor:pointer;">&#10094;</button>' +
+                '<button type="button" id="lec-lb-next" aria-label="Next photo" ' +
+                    'style="position:absolute;right:14px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.12);color:#fff;font-size:26px;padding:14px 16px;border-radius:50%;cursor:pointer;">&#10095;</button>' +
+                '<img id="lec-lb-img" alt="" style="max-width:92vw;max-height:78vh;border-radius:10px;box-shadow:0 12px 50px rgba(0,0,0,.6);object-fit:contain;">' +
+                '<div id="lec-lb-caption" style="color:#fff;text-align:center;margin-top:16px;font-size:14px;max-width:80vw;">' +
+                    '<strong></strong><span></span>' +
+                '</div>';
+            var captionBox = overlay.querySelector('#lec-lb-caption');
+            captionBox.querySelector('strong').style.cssText = 'display:block;font-size:15px;margin-bottom:2px;';
+            captionBox.querySelector('span').style.cssText = 'opacity:.7;';
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
+
+            show(startIndex);
+
+            overlay.querySelector('#lec-lb-close').addEventListener('click', close);
+            overlay.querySelector('#lec-lb-prev').addEventListener('click', function () { show(currentIndex - 1); });
+            overlay.querySelector('#lec-lb-next').addEventListener('click', function () { show(currentIndex + 1); });
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) close();
+            });
+            document.addEventListener('keydown', onKey);
+
+            // restore scrolling when closed
+            var observer = new MutationObserver(function () {
+                if (!document.getElementById('lec-lightbox')) {
+                    document.body.style.overflow = '';
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.body, { childList: true });
+        }
+
+        // Delegate clicks: any photo inside a public gallery grid opens the lightbox.
+        document.addEventListener('click', function (event) {
+            var img = event.target;
+            if (!img || img.tagName !== 'IMG') return;
+            var grid = img.closest('.portfolio-grid, #admin-gallery');
+            if (!grid) return;
+            event.preventDefault();
+            open(img, Array.prototype.slice.call(grid.querySelectorAll('img')));
+        });
+    })();
+
     /* ---------------- LEGAL FOOTER BAR (every public page, admin excluded) ---------------- */
 
     (function buildLegalBar() {
