@@ -478,6 +478,64 @@ module.exports = async (req, res) => {
   const method = req.method;
 
   try {
+    /* ---------- backups (master only) ---------- */
+    if (resource === 'backups') {
+      const user = await requireAuth(req, res); if (!user) return;
+      if (user.role !== 'master') return fail(res, 'Only the master admin can manage backups.', 403);
+      const backupPool = db();
+
+      // List stored snapshots (metadata only — not the payloads).
+      if (method === 'GET' && !id) {
+        const rows = await backupPool.query(
+          'SELECT id, created_at, table_counts, row_count FROM backups ORDER BY created_at DESC LIMIT 60');
+        return json(res, { data: rows.rows });
+      }
+
+      // GET ?id=N → download a snapshot as JSON.
+      if (method === 'GET' && id) {
+        const row = await backupPool.query('SELECT * FROM backups WHERE id = $1', [id]);
+        if (!row.rows.length) return fail(res, 'Backup snapshot not found.', 404);
+        return json(res, row.rows[0].payload);
+      }
+
+      // POST → take a snapshot right now (reuses the cron logic inline).
+      if (method === 'POST' && !id) {
+        const BACKUP_TABLES = ['users','customers','vehicles','mechanics','spare_parts','job_cards','job_card_parts','invoices','payments','service_requests','gallery_images'];
+        const snapshot = { version: 1, taken_at: new Date().toISOString(), tables: {} };
+        let totalRows = 0;
+        for (const table of BACKUP_TABLES) {
+          try {
+            const result = await backupPool.query(`SELECT * FROM ${table} ORDER BY id ASC`);
+            let rows = result.rows;
+            if (table === 'gallery_images') {
+              rows = rows.map((r) => { const copy = { ...r }; delete copy.data; delete copy.thumb_data; copy._image_bytes_omitted = true; return copy; });
+            }
+            if (table === 'users') {
+              rows = rows.map((r) => { const copy = { ...r }; delete copy.password_hash; delete copy.security_answer_hash; return copy; });
+            }
+            snapshot.tables[table] = rows;
+            totalRows += rows.length;
+          } catch (tableError) {
+            snapshot.tables[table] = { error: tableError.message };
+          }
+        }
+        const counts = Object.fromEntries(Object.entries(snapshot.tables).map(([t, v]) => [t, Array.isArray(v) ? v.length : -1]));
+        await backupPool.query('INSERT INTO backups (table_counts, row_count, payload) VALUES ($1, $2, $3)',
+          [JSON.stringify(counts), totalRows, JSON.stringify(snapshot)]);
+        await backupPool.query(
+          'DELETE FROM backups WHERE id NOT IN (SELECT id FROM backups ORDER BY created_at DESC LIMIT 30)');
+        await logActivity(backupPool, 'create', 'backups', null, `Manual backup: ${totalRows} rows`, user);
+        return json(res, { success: true, snapshot_rows: totalRows, tables: counts }, 201);
+      }
+
+      // DELETE ?id=N → remove one snapshot.
+      if (method === 'DELETE' && id) {
+        await backupPool.query('DELETE FROM backups WHERE id = $1', [id]);
+        return json(res, { success: true });
+      }
+      return fail(res, 'Method not allowed.', 405);
+    }
+
     /* ---------- auth ---------- */
     if (resource === 'auth') {
       const body = req.body || {};

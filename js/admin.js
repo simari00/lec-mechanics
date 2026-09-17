@@ -614,6 +614,13 @@
                 '<button type="submit" style="margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Change password</button>' +
                 '</form>' +
                 '<div id="lec-sec-msg" style="margin-top:14px;font-size:13px;min-height:18px;"></div>' +
+                (me.is_master ?
+                '<div style="border-top:1px solid #eee;margin-top:18px;padding-top:16px;">' +
+                '<h3 style="margin:0 0 8px;font-size:15px;">💾 Database backups</h3>' +
+                '<p style="margin:0 0 10px;color:#777;font-size:12px;">A snapshot of every table is saved automatically every night (last 30 kept). You can also snapshot right now or download any snapshot as a JSON file.</p>' +
+                '<button type="button" id="lec-sec-backup-now" style="padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">💾 Back up now</button>' +
+                '<div id="lec-sec-backup-list" style="margin-top:12px;"><em style="color:#999;font-size:12px;">Loading snapshots…</em></div>' +
+                '</div>' : '') +
                 '</div>';
 
             document.body.appendChild(overlay);
@@ -735,6 +742,57 @@
             }
 
             overlay.querySelector('#lec-sec-close').addEventListener('click', function () { overlay.remove(); });
+
+            // ---- backups (master only) ----
+            var backupBox = overlay.querySelector('#lec-sec-backup-list');
+            if (backupBox) {
+                function loadBackups() {
+                    api('backups', { method: 'GET' }).then(function (result) {
+                        var rows = result.data || [];
+                        if (!rows.length) {
+                            backupBox.innerHTML = '<em style="color:#999;font-size:12px;">No snapshots yet — the first automatic one runs tonight, or press “Back up now”.</em>';
+                            return;
+                        }
+                        backupBox.innerHTML = rows.map(function (row) {
+                            var when = new Date(row.created_at).toLocaleString();
+                            var downloadId = row.id;
+                            return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f2f2f2;font-size:12.5px;">' +
+                                '<span><strong>' + esc(when) + '</strong> — ' + row.row_count + ' rows</span>' +
+                                '<button type="button" class="lec-backup-dl" data-id="' + downloadId + '" ' +
+                                'style="padding:4px 10px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Download</button>' +
+                                '</div>';
+                        }).join('');
+                        backupBox.querySelectorAll('.lec-backup-dl').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var id = btn.getAttribute('data-id');
+                                fetch('../api?resource=backups&id=' + id, { credentials: 'same-origin' })
+                                    .then(function (r) { return r.json(); })
+                                    .then(function (snap) {
+                                        var blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+                                        var a = document.createElement('a');
+                                        a.href = URL.createObjectURL(blob);
+                                        a.download = 'lec-backup-' + id + '.json';
+                                        a.click();
+                                        URL.revokeObjectURL(a.href);
+                                    }).catch(function (e) { msg(e.message, true); });
+                            });
+                        });
+                    }).catch(function (e) {
+                        backupBox.innerHTML = '<em style="color:#c0392b;font-size:12px;">' + esc(e.message) + '</em>';
+                    });
+                }
+                loadBackups();
+
+                overlay.querySelector('#lec-sec-backup-now').addEventListener('click', function () {
+                    var btn = overlay.querySelector('#lec-sec-backup-now');
+                    btn.disabled = true; btn.textContent = 'Backing up…';
+                    api('backups', { method: 'POST' }).then(function (r) {
+                        msg(r.success ? 'Backup saved: ' + r.snapshot_rows + ' rows.' : 'Done.');
+                        loadBackups();
+                    }).catch(function (e) { msg(e.message, true); })
+                      .finally(function () { btn.disabled = false; btn.textContent = '💾 Back up now'; });
+                });
+            }
 
             overlay.querySelector('#lec-sec-question-form').addEventListener('submit', function (event) {
                 event.preventDefault();
