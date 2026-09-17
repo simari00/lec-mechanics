@@ -906,13 +906,52 @@ module.exports = async (req, res) => {
 
     if (method === 'DELETE') {
       if (!id) return fail(res, 'An id is required.', 422);
+      // Friendly, precise dependency errors: name exactly what blocks the delete.
+      const DEPENDENCIES = {
+        customers: [
+          ['vehicles', 'customer_id', 'vehicle(s) belong to this customer'],
+          ['job_cards', 'customer_id', 'job card(s) belong to this customer'],
+          ['invoices', 'customer_id', 'invoice(s) belong to this customer'],
+        ],
+        vehicles: [
+          ['job_cards', 'vehicle_id', 'job card(s) use this vehicle'],
+          ['invoices', 'vehicle_id', 'invoice(s) use this vehicle'],
+        ],
+        job_cards: [
+          ['invoices', 'job_card_id', 'invoice(s) are linked to this job card'],
+          ['job_card_parts', 'job_card_id', 'spare part(s) are assigned to this job card'],
+        ],
+        invoices: [
+          ['payments', 'invoice_id', 'payment(s) are recorded against this invoice'],
+        ],
+        mechanics: [
+          ['job_cards', 'mechanic_id', 'job card(s) are assigned to this mechanic'],
+        ],
+        spare_parts: [
+          ['job_card_parts', 'spare_part_id', 'job card(s) use this spare part'],
+        ],
+        users: [
+          ['job_cards', 'created_by', 'job card(s) were created by this account'],
+        ],
+      };
+      const deps = DEPENDENCIES[definition.table];
+      if (deps) {
+        const blockers = [];
+        for (const [table, column, label] of deps) {
+          const r = await client.query(`SELECT COUNT(*)::int AS n FROM ${table} WHERE ${column} = $1`, [id]);
+          if (r.rows[0].n > 0) blockers.push(`${r.rows[0].n} ${label}`);
+        }
+        if (blockers.length) {
+          return fail(res, 'Cannot delete: ' + blockers.join(', ') + '. Delete those first (or the records linked to them, e.g. payments before invoices).', 409);
+        }
+      }
       try {
         const del = await client.query(`DELETE FROM ${definition.table} WHERE id = $1`, [id]);
         await logActivity(client, 'delete', resource, id, describeRecord(body), user);
         return json(res, { success: true, deleted: del.rowCount });
       } catch (error) {
         if (String(error.code) === '23503') {
-          return fail(res, 'This record cannot be deleted because other records depend on it (e.g. payments or job cards). Delete those first.', 409);
+          return fail(res, 'This record cannot be deleted because other records depend on it. Delete those first.', 409);
         }
         throw error;
       }
