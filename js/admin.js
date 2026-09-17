@@ -177,6 +177,38 @@
         return 'width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px;';
     }
 
+    // Show/hide (eye) buttons inside a container.
+    function wirePasswordEyes(container) {
+        if (!container) return;
+        container.querySelectorAll('.lec-eye').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var input = container.querySelector('#' + btn.getAttribute('data-target'));
+                if (!input) return;
+                var showing = input.type === 'text';
+                input.type = showing ? 'password' : 'text';
+                btn.textContent = showing ? '👁' : '🙈';
+                input.focus();
+            });
+        });
+    }
+
+    // Live 'passwords match' indicator between a password field and its confirm field.
+    function wirePasswordMatch(passwordInput, confirmInput, hintEl) {
+        if (!passwordInput || !confirmInput || !hintEl) return;
+        function update() {
+            if (!confirmInput.value) { hintEl.textContent = ''; hintEl.style.color = ''; return; }
+            if (confirmInput.value === passwordInput.value) {
+                hintEl.textContent = '✓ Passwords match';
+                hintEl.style.color = '#1e8e3e';
+            } else {
+                hintEl.textContent = '✗ Passwords do not match';
+                hintEl.style.color = '#c0392b';
+            }
+        }
+        passwordInput.addEventListener('input', update);
+        confirmInput.addEventListener('input', update);
+    }
+
     function labelStyle() {
         return 'display:block;font-size:13px;font-weight:600;margin:12px 0 4px;';
     }
@@ -201,11 +233,22 @@
             '<label style="' + labelStyle() + '">Email</label>' +
             '<input id="lec-login-email" type="email" required autocomplete="username" style="' + inputStyle() + '">' +
             '<label style="' + labelStyle() + '">Password</label>' +
-            '<input id="lec-login-password" type="password" required autocomplete="current-password" style="' + inputStyle() + '">' +
+            '<div style="position:relative;">' +
+            '<input id="lec-login-password" type="password" required autocomplete="current-password" style="' + inputStyle() + ' padding-right:44px;">' +
+            '<button type="button" class="lec-eye" data-target="lec-login-password" title="Show / hide password" ' +
+            'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+            '</div>' +
             '<small id="lec-caps-hint" style="display:block;color:#c0392b;font-size:12px;margin-top:4px;min-height:14px;"></small>' +
             '<div id="lec-setup-fields" hidden>' +
             '<label style="' + labelStyle() + '">Full name</label>' +
             '<input id="lec-setup-name" type="text" style="' + inputStyle() + '">' +
+            '<label style="' + labelStyle() + '">Confirm password</label>' +
+            '<div style="position:relative;">' +
+            '<input id="lec-setup-confirm" type="password" autocomplete="new-password" style="' + inputStyle() + ' padding-right:44px;">' +
+            '<button type="button" class="lec-eye" data-target="lec-setup-confirm" title="Show / hide password" ' +
+            'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+            '</div>' +
+            '<small id="lec-setup-match-hint" style="display:block;font-size:12px;margin-top:4px;min-height:14px;"></small>' +
             '<label style="' + labelStyle() + '">Security question</label>' +
             '<select id="lec-setup-question" style="' + inputStyle() + '">' +
             SECURITY_QUESTIONS.map(function (q) { return '<option>' + q + '</option>'; }).join('') +
@@ -257,6 +300,8 @@
         var setupMode = false;
 
         wireCapsLockWarning(overlay.querySelector('#lec-login-password'), overlay.querySelector('#lec-caps-hint'));
+        wirePasswordEyes(overlay);
+        wirePasswordMatch(overlay.querySelector('#lec-login-password'), overlay.querySelector('#lec-setup-confirm'), overlay.querySelector('#lec-setup-match-hint'));
 
         var forgotForm = overlay.querySelector('#lec-forgot-form');
         var forgotToggle = overlay.querySelector('#lec-forgot-toggle');
@@ -355,6 +400,12 @@
 
             var request;
             if (setupMode) {
+                var confirmValue = overlay.querySelector('#lec-setup-confirm').value;
+                if (password !== confirmValue) {
+                    errorBox.textContent = 'Password confirmation does not match the password.';
+                    submitBtn.disabled = false;
+                    return;
+                }
                 request = api('auth', {
                     method: 'POST',
                     action: 'setup',
@@ -362,6 +413,7 @@
                         full_name: overlay.querySelector('#lec-setup-name').value.trim(),
                         email: email,
                         password: password,
+                        confirm_password: confirmValue,
                         security_question: overlay.querySelector('#lec-setup-question').value,
                         security_answer: overlay.querySelector('#lec-setup-answer').value
                     }
@@ -443,6 +495,7 @@
                 '<p style="margin:0 0 18px;color:#666;font-size:13px;">Admin accounts: <strong>' + (me.user_count || 0) + ' of ' + maxAdmins + '</strong>' +
                 (canCreateAdmin ? '' : ' — the cap is reached.') + '</p>' +
                 '<div id="lec-sec-admin-list" style="margin:0 0 18px;"><em style="color:#999;font-size:13px;">Loading accounts…</em></div>' +
+                '<div id="lec-sec-pending" style="margin:0 0 18px;"></div>' +
 
                 /* --- security question --- */
                 '<form id="lec-sec-question-form" style="border-top:1px solid #eee;padding-top:16px;">' +
@@ -458,16 +511,28 @@
                 '<button type="submit" style="margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Save security question</button>' +
                 '</form>' +
 
-                /* --- create second admin --- */
-                (canCreateAdmin
+                /* --- create admin (master only, pending approval) --- */
+                (canCreateAdmin && me.is_master
                     ? '<form id="lec-sec-admin-form" style="border-top:1px solid #eee;margin-top:18px;padding-top:16px;">' +
-                      '<h3 style="margin:0 0 8px;font-size:15px;">Create the second admin</h3>' +
+                      '<h3 style="margin:0 0 8px;font-size:15px;">Create admin account</h3>' +
+                      '<p style="margin:0 0 10px;color:#777;font-size:12px;">The new account stays locked until you approve it below.</p>' +
                       '<label style="' + labelStyle() + '">Full name</label>' +
                       '<input id="lec-sec-admin-name" type="text" style="' + inputStyle() + '">' +
                       '<label style="' + labelStyle() + '">Email</label>' +
                       '<input id="lec-sec-admin-email" type="email" style="' + inputStyle() + '">' +
                       '<label style="' + labelStyle() + '">Password</label>' +
-                      '<input id="lec-sec-admin-password" type="password" autocomplete="new-password" style="' + inputStyle() + '">' +
+                      '<div style="position:relative;">' +
+                      '<input id="lec-sec-admin-password" type="password" autocomplete="new-password" style="' + inputStyle() + ' padding-right:44px;">' +
+                      '<button type="button" class="lec-eye" data-target="lec-sec-admin-password" title="Show / hide password" ' +
+                      'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+                      '</div>' +
+                      '<label style="' + labelStyle() + '">Confirm password</label>' +
+                      '<div style="position:relative;">' +
+                      '<input id="lec-sec-admin-confirm" type="password" autocomplete="new-password" style="' + inputStyle() + ' padding-right:44px;">' +
+                      '<button type="button" class="lec-eye" data-target="lec-sec-admin-confirm" title="Show / hide password" ' +
+                      'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+                      '</div>' +
+                      '<small id="lec-sec-admin-match" style="display:block;font-size:12px;margin-top:4px;min-height:14px;"></small>' +
                       '<small style="display:block;color:#777;font-size:12px;margin-top:4px;">' + passwordRuleText() + '</small>' +
                       '<label style="' + labelStyle() + '">Security question</label>' +
                       '<select id="lec-sec-admin-question" style="' + inputStyle() + '">' +
@@ -477,7 +542,10 @@
                       '<input id="lec-sec-admin-answer" type="text" autocomplete="off" style="' + inputStyle() + '">' +
                       '<button type="submit" style="margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Create admin account</button>' +
                       '</form>'
-                    : '<p style="border-top:1px solid #eee;margin:18px 0 0;padding-top:16px;color:#777;font-size:13px;">The maximum of ' + maxAdmins + ' admin accounts exists. Delete is not exposed; all admins can sign in normally.</p>') +
+                    : '<p style="border-top:1px solid #eee;margin:18px 0 0;padding-top:16px;color:#777;font-size:13px;">' +
+                      (me.is_master
+                          ? 'The maximum of ' + maxAdmins + ' approved admin accounts exists. Delete is not exposed; all admins can sign in normally.'
+                          : 'Only the master admin account can create new admin accounts.') + '</p>') +
 
                 /* --- change password --- */
                 '<form id="lec-sec-password-form" style="border-top:1px solid #eee;margin-top:18px;padding-top:16px;">' +
@@ -485,14 +553,28 @@
                 '<label style="' + labelStyle() + '">Current password</label>' +
                 '<input id="lec-sec-current" type="password" autocomplete="current-password" style="' + inputStyle() + '">' +
                 '<label style="' + labelStyle() + '">New password</label>' +
-                '<input id="lec-sec-new" type="password" autocomplete="new-password" style="' + inputStyle() + '">' +
-                '<small style="display:block;color:#777;font-size:12px;margin-top:4px;">' + passwordRuleText() + '</small>' +
+                '<div style="position:relative;">' +
+                '<input id="lec-sec-new" type="password" autocomplete="new-password" style="' + inputStyle() + ' padding-right:44px;">' +
+                '<button type="button" class="lec-eye" data-target="lec-sec-new" title="Show / hide password" ' +
+                'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+                '</div>' +
+                '<label style="' + labelStyle() + '">Confirm new password</label>' +
+                '<div style="position:relative;">' +
+                '<input id="lec-sec-new-confirm" type="password" autocomplete="new-password" style="' + inputStyle() + ' padding-right:44px;">' +
+                '<button type="button" class="lec-eye" data-target="lec-sec-new-confirm" title="Show / hide password" ' +
+                'style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:16px;padding:4px;">👁</button>' +
+                '</div>' +
+                '<small id="lec-sec-new-match" style="display:block;font-size:12px;margin-top:4px;min-height:14px;"></small>' +
                 '<button type="submit" style="margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Change password</button>' +
                 '</form>' +
                 '<div id="lec-sec-msg" style="margin-top:14px;font-size:13px;min-height:18px;"></div>' +
                 '</div>';
 
             document.body.appendChild(overlay);
+
+            wirePasswordEyes(overlay);
+            wirePasswordMatch(overlay.querySelector('#lec-sec-admin-password'), overlay.querySelector('#lec-sec-admin-confirm'), overlay.querySelector('#lec-sec-admin-match'));
+            wirePasswordMatch(overlay.querySelector('#lec-sec-new'), overlay.querySelector('#lec-sec-new-confirm'), overlay.querySelector('#lec-sec-new-match'));
 
             function msg(text, isError) {
                 var box = overlay.querySelector('#lec-sec-msg');
@@ -504,10 +586,50 @@
                 api('auth', { action: 'list-users' }).then(function (result) {
                     var container = overlay.querySelector('#lec-sec-admin-list');
                     var rows = result.data || [];
+
+                    // Master admin: pending account requests with approve/reject buttons.
+                    var pendingBox = overlay.querySelector('#lec-sec-pending');
+                    if (pendingBox) {
+                        var pending = result.data.filter(function (r) { return r.approval_status === 'pending'; });
+                        if (result.is_master && pending.length) {
+                            pendingBox.innerHTML =
+                                '<div style="border:2px solid #e67e22;border-radius:10px;padding:12px;background:#fff8ef;">' +
+                                '<h3 style="margin:0 0 8px;font-size:14px;color:#b9770e;">⏳ Pending approvals (' + pending.length + ')</h3>' +
+                                pending.map(function (row) {
+                                    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0e0c8;font-size:13px;">' +
+                                        '<div><strong>' + esc(row.full_name) + '</strong>' +
+                                        '<div style="color:#777;font-size:12px;">' + esc(row.email) + '</div></div>' +
+                                        '<div style="display:flex;gap:6px;">' +
+                                        '<button type="button" class="lec-approve" data-id="' + row.id + '" ' +
+                                        'style="padding:6px 12px;border:0;border-radius:6px;background:#1e8e3e;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✓ Approve</button>' +
+                                        '<button type="button" class="lec-reject" data-id="' + row.id + '" ' +
+                                        'style="padding:6px 12px;border:0;border-radius:6px;background:#c0392b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✗ Reject</button>' +
+                                        '</div></div>';
+                                }).join('') + '</div>';
+                            pendingBox.querySelectorAll('.lec-approve').forEach(function (btn) {
+                                btn.addEventListener('click', function () {
+                                    decideUser(btn.getAttribute('data-id'), 'approve-user');
+                                });
+                            });
+                            pendingBox.querySelectorAll('.lec-reject').forEach(function (btn) {
+                                btn.addEventListener('click', function () {
+                                    decideUser(btn.getAttribute('data-id'), 'reject-user');
+                                });
+                            });
+                        } else {
+                            pendingBox.innerHTML = '';
+                        }
+                    }
+
                     container.innerHTML =
                         '<div style="border:1px solid #eee;border-radius:10px;overflow:hidden;">' +
                         rows.map(function (row) {
                             var isCurrent = row.id === result.current_user_id;
+                            var statusLabel = row.approval_status === 'pending'
+                                ? '<span style="color:#e67e22;font-weight:700;">⏳ awaiting approval</span>'
+                                : (row.approval_status === 'rejected'
+                                    ? '<span style="color:#c0392b;font-weight:700;">rejected</span>'
+                                    : (row.role === 'master' ? '<span style="color:#8e44ad;font-weight:700;">★ master</span>' : 'Active'));
                             return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;' +
                                 'border-bottom:1px solid #eee;font-size:13px;' + (isCurrent ? 'background:#f6f9ff;' : '') + '">' +
                                 '<div>' +
@@ -515,7 +637,7 @@
                                 '<div style="color:#777;font-size:12px;">' + esc(row.email) + '</div>' +
                                 '</div>' +
                                 '<div style="text-align:right;font-size:12px;color:' + (row.is_active ? '#1e8e3e' : '#c0392b') + ';">' +
-                                (row.is_active ? 'Active' : 'Disabled') +
+                                statusLabel +
                                 '<div style="color:' + (Number(row.has_security_question) ? '#1e8e3e' : '#e67e22') + ';">' +
                                 (Number(row.has_security_question) ? '✓ recovery set' : '⚠ no recovery') + '</div>' +
                                 '</div>' +
@@ -528,6 +650,17 @@
                 });
             }
             renderAdminList();
+
+            function decideUser(id, action) {
+                api('auth', {
+                    method: 'POST',
+                    action: action,
+                    body: { id: Number(id) }
+                }).then(function (r) {
+                    msg(r.message || 'Done.');
+                    renderAdminList();
+                }).catch(function (e) { msg(e.message, true); });
+            }
 
             overlay.querySelector('#lec-sec-close').addEventListener('click', function () { overlay.remove(); });
 
@@ -548,13 +681,20 @@
             if (adminForm) {
                 adminForm.addEventListener('submit', function (event) {
                     event.preventDefault();
+                    var pw = overlay.querySelector('#lec-sec-admin-password').value;
+                    var pwConfirm = overlay.querySelector('#lec-sec-admin-confirm').value;
+                    if (pw !== pwConfirm) {
+                        msg('Password confirmation does not match the password.', true);
+                        return;
+                    }
                     api('auth', {
                         method: 'POST',
                         action: 'create-admin',
                         body: {
                             full_name: overlay.querySelector('#lec-sec-admin-name').value.trim(),
                             email: overlay.querySelector('#lec-sec-admin-email').value.trim(),
-                            password: overlay.querySelector('#lec-sec-admin-password').value,
+                            password: pw,
+                            confirm_password: pwConfirm,
                             security_question: overlay.querySelector('#lec-sec-admin-question').value,
                             security_answer: overlay.querySelector('#lec-sec-admin-answer').value
                         }
@@ -573,12 +713,19 @@
 
             overlay.querySelector('#lec-sec-password-form').addEventListener('submit', function (event) {
                 event.preventDefault();
+                var newPw = overlay.querySelector('#lec-sec-new').value;
+                var newConfirm = overlay.querySelector('#lec-sec-new-confirm').value;
+                if (newPw !== newConfirm) {
+                    msg('Password confirmation does not match the new password.', true);
+                    return;
+                }
                 api('auth', {
                     method: 'POST',
                     action: 'change-password',
                     body: {
                         current_password: overlay.querySelector('#lec-sec-current').value,
-                        new_password: overlay.querySelector('#lec-sec-new').value
+                        new_password: newPw,
+                        confirm_password: newConfirm
                     }
                 }).then(function (r) {
                     msg(r.message || 'Password changed.');
@@ -1402,6 +1549,8 @@
         var form = $('sr-form');
         var editLabel = $('sr-edit-label');
         var editingId = null;
+        var showApprenticeships = false;
+        var allRequests = [];
 
         function statusColor(status) {
             return {
@@ -1411,8 +1560,67 @@
                 'Scheduled': '#e67e22',
                 'Declined': '#c0392b',
                 'Completed': '#1e8e3e',
-                'Closed': '#7f8c8d'
+                'Closed': '#7f8c8d',
+                'Car Fixed': '#1e8e3e',
+                'Not Done': '#c0392b'
             }[status] || '#333';
+        }
+
+        // Quick status update from the action buttons in the table.
+        function quickStatus(id, status) {
+            var label = { 'Approved': 'Approve this request?', 'Car Fixed': 'Mark as CAR FIXED? The client will see this immediately.', 'Not Done': 'Mark as NOT DONE? The client will be asked to call you.' }[status];
+            if (!window.confirm(label || ('Set status to ' + status + '?'))) return;
+            api('service_requests', { method: 'PATCH', id: id, body: { status: status } })
+                .then(function () {
+                    toast('Status set to ' + status + '.');
+                    refresh();
+                })
+                .catch(function (error) { toast(error.message, true); });
+        }
+
+        // Show the full apprenticeship application details.
+        function showApprenticeDetails(record) {
+            var detailsBox = $('sr-apprentice-details');
+            var panelBox = $('sr-apprentice-panel');
+            if (!detailsBox || !panelBox) return;
+            if ($('sr-apprentice-label')) $('sr-apprentice-label').textContent = '#' + record.id + ' — ' + record.full_name;
+            var rows = [
+                ['Name', (record.first_name || '') + ' ' + (record.last_name || '')],
+                ['Age', record.age || '—'],
+                ['Phone', record.phone || '—'],
+                ['Email', record.email || '—'],
+                ['O Level qualifications', record.o_level_results || '—'],
+                ['A Level qualifications', record.a_level_results || '—'],
+                ['Technical subjects', record.technical_subjects || '—'],
+                ['Driver\'s licence', record.drivers_licence || '—'],
+                ['Motivation / notes', record.message || '—'],
+                ['Tracking code', record.tracking_code || '—'],
+                ['Submitted', String(record.created_at || '').slice(0, 10)]
+            ];
+            detailsBox.innerHTML = rows.map(function (pair) {
+                return '<div><dt>' + esc(pair[0]) + '</dt><dd>' + esc(pair[1]) + '</dd></div>';
+            }).join('');
+            panelBox.hidden = false;
+            panelBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Tab switching between car requests and apprenticeship applications.
+        var tabService = $('sr-tab-service');
+        var tabApprentice = $('sr-tab-apprentice');
+        function paintTabs() {
+            if (tabService) tabService.className = showApprenticeships ? 'cancel-button' : 'admin-primary-button';
+            if (tabApprentice) tabApprentice.className = showApprenticeships ? 'admin-primary-button' : 'cancel-button';
+        }
+        if (tabService) tabService.addEventListener('click', function () {
+            showApprenticeships = false; paintTabs(); refresh();
+        });
+        if (tabApprentice) tabApprentice.addEventListener('click', function () {
+            showApprenticeships = true; paintTabs(); refresh();
+        });
+        if ($('sr-apprentice-close')) {
+            $('sr-apprentice-close').addEventListener('click', function () {
+                if ($('sr-apprentice-panel')) $('sr-apprentice-panel').hidden = true;
+            });
         }
 
         function stopEdit() {
@@ -1445,20 +1653,41 @@
                     toast(error.message, true);
                 });
             });
-        }
-
-        function refresh() {
+        }        function refresh() {
             return api('service_requests').then(function (result) {
-                var rows = (result.data || []).slice().sort(function (a, b) { return b.id - a.id; });
+                allRequests = (result.data || []).slice().sort(function (a, b) { return b.id - a.id; });
+                var rows = allRequests.filter(function (r) {
+                    return showApprenticeships ? r.request_type === 'Apprenticeship' : r.request_type !== 'Apprenticeship';
+                });
 
                 if (!rows.length) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="table-empty">No service requests yet. They will appear here when customers submit the website contact form.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9" class="table-empty">' + (showApprenticeships
+                        ? 'No apprenticeship applications yet. They appear here when someone applies on the Services page.'
+                        : 'No service requests yet. They will appear here when customers submit the website contact form.') + '</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = rows.map(function (row) {
                     var search = (row.full_name + ' ' + row.phone + ' ' + row.request_type + ' ' + row.message + ' ' + row.status)
                         .toLowerCase().replace(/"/g, '&quot;');
+                    var isApp = row.request_type === 'Apprenticeship';
+                    var fixed = row.status === 'Car Fixed' || row.status === 'Not Done' || row.status === 'Completed';
+                    var actions =
+                        '<button type="button" class="row-track" data-id="' + row.id + '">🔍 Track</button>' +
+                        (isApp
+                            ? '<button type="button" class="row-app-details" data-id="' + row.id + '">📄 Details</button>' +
+                              (row.status !== 'Approved'
+                                  ? '<button type="button" class="row-quick-approve" data-id="' + row.id + '">✓ Approve</button>' +
+                                    '<button type="button" class="row-quick-decline" data-id="' + row.id + '">✗ Disapprove</button>'
+                                  : '')
+                            : (row.status !== 'Car Fixed'
+                                  ? '<button type="button" class="row-quick-fixed" data-id="' + row.id + '" ' +
+                                    'style="background:#1e8e3e;color:#fff;border-color:#1e8e3e;">✔ Car Fixed</button>' : '') +
+                              (row.status !== 'Not Done'
+                                  ? '<button type="button" class="row-quick-notdone" data-id="' + row.id + '" ' +
+                                    'style="background:#c0392b;color:#fff;border-color:#c0392b;">✖ Not Done</button>' : '')) +
+                        '<button type="button" class="row-edit" data-id="' + row.id + '">Edit</button>' +
+                        '<button type="button" class="row-delete" data-id="' + row.id + '">Delete</button>';
                     return '<tr data-search="' + search + '">' +
                         '<td>' + row.id + '</td>' +
                         '<td><strong>' + esc(row.full_name) + '</strong></td>' +
@@ -1468,12 +1697,27 @@
                         '<td>' + esc(row.preferred_date || '—') + '</td>' +
                         '<td><span style="color:' + statusColor(row.status) + ';font-weight:700;">' + esc(row.status) + '</span></td>' +
                         '<td><code class="track-code-cell">' + esc(row.tracking_code || '—') + '</code></td>' +
-                        '<td style="white-space:nowrap;">' +
-                        '<button type="button" class="row-track" data-id="' + row.id + '">🔍 Track</button>' +
-                        '<button type="button" class="row-edit" data-id="' + row.id + '">Edit</button>' +
-                        '<button type="button" class="row-delete" data-id="' + row.id + '">Delete</button>' +
-                        '</td></tr>';
+                        '<td style="white-space:nowrap;">' + actions + '</td></tr>';
                 }).join('');
+
+                tbody.querySelectorAll('.row-quick-approve').forEach(function (button) {
+                    button.addEventListener('click', function () { quickStatus(button.getAttribute('data-id'), 'Approved'); });
+                });
+                tbody.querySelectorAll('.row-quick-decline').forEach(function (button) {
+                    button.addEventListener('click', function () { quickStatus(button.getAttribute('data-id'), 'Declined'); });
+                });
+                tbody.querySelectorAll('.row-quick-fixed').forEach(function (button) {
+                    button.addEventListener('click', function () { quickStatus(button.getAttribute('data-id'), 'Car Fixed'); });
+                });
+                tbody.querySelectorAll('.row-quick-notdone').forEach(function (button) {
+                    button.addEventListener('click', function () { quickStatus(button.getAttribute('data-id'), 'Not Done'); });
+                });
+                tbody.querySelectorAll('.row-app-details').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        var record = rows.filter(function (r) { return String(r.id) === button.getAttribute('data-id'); })[0];
+                        if (record) showApprenticeDetails(record);
+                    });
+                });
 
                 tbody.querySelectorAll('.row-edit').forEach(function (button) {
                     button.addEventListener('click', function () {
@@ -1485,6 +1729,16 @@
                         $('sr-phone-edit').value = record.phone || '';
                         $('sr-notes-edit').value = record.message || '';
                         if ($('sr-code-display')) $('sr-code-display').value = record.tracking_code || '—';
+                        var statusSelect = $('sr-status');
+                        if (statusSelect) {
+                            // Include the request's current status even if it is a new value.
+                            var hasOption = Array.prototype.some.call(statusSelect.options, function (o) { return o.value === record.status; });
+                            if (!hasOption && record.status) {
+                                var opt = document.createElement('option');
+                                opt.value = record.status; opt.textContent = record.status;
+                                statusSelect.appendChild(opt);
+                            }
+                        }
                         panel.hidden = false;
                         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     });
@@ -1555,9 +1809,33 @@
         }
 
         var body;
-        if (status === 'Declined' || status === 'Closed') {
+        if (status === 'Car Fixed' || status === 'Completed') {
+            body =
+                '<span class="track-status-pill track-pill-success">✔ Car Fixed</span>' +
+                '<h3>Your car is fixed! 🎉</h3>' +
+                '<p>All work has been completed. The customer can collect the vehicle at their convenience.</p>' +
+                '<dl class="track-details">' +
+                    '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
+                    '<div><dt>Service</dt><dd>' + esc(record.service_name || record.request_type) + '</dd></div>' +
+                    '<div><dt>Vehicle</dt><dd>' + esc(record.registration_number || '—') + '</dd></div>' +
+                    '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
+                '</dl>';
+        } else if (status === 'Not Done') {
+            body =
+                '<span class="track-status-pill track-pill-declined">✖ Not Done</span>' +
+                '<h3>We could not complete this job</h3>' +
+                '<p>The customer sees: unable to fix due to circumstances beyond our control — asked to call 0771 232 171.</p>' +
+                '<dl class="track-details">' +
+                    '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
+                    '<div><dt>Service</dt><dd>' + esc(record.service_name || record.request_type) + '</dd></div>' +
+                    '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
+                '</dl>';
+        } else if (status === 'Declined' || status === 'Closed') {
+            var isApprenticeship = (record.request_type || '') === 'Apprenticeship';
             var closedNote = status === 'Declined'
-                ? 'Unfortunately this request was not approved. The customer can call 0771 232 171 to discuss it.'
+                ? (isApprenticeship
+                    ? 'The apprenticeship application was not successful this time.'
+                    : 'Unfortunately this request was not approved. The customer can call 0771 232 171 to discuss it.')
                 : 'This request has been closed. The customer can submit a new request if they still need service.';
             body =
                 '<span class="track-status-pill track-pill-declined">' + esc(status) + '</span>' +
@@ -1565,7 +1843,7 @@
                 '<p>' + closedNote + '</p>' +
                 '<dl class="track-details">' +
                     '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
-                    '<div><dt>Service</dt><dd>' + esc(record.service_name || record.request_type) + '</dd></div>' +
+                    '<div><dt>Type</dt><dd>' + esc(record.request_type) + '</dd></div>' +
                     '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
                 '</dl>';
         } else {
@@ -1902,6 +2180,16 @@
                 if ($('gallery-count')) {
                     $('gallery-count').textContent = items.length + ' image(s) published';
                 }
+
+                // Folder suggestions for the upload form.
+                var folders = result.folders || {};
+                var dataList = $('gallery-folder-list');
+                if (dataList) {
+                    dataList.innerHTML = Object.keys(folders).map(function (name) {
+                        return '<option value="' + esc(name) + '">';
+                    }).join('');
+                }
+
                 if (!items.length) {
                     grid.innerHTML = '<p class="table-empty">📷 No images yet — upload your first photo above.</p>';
                     return;
@@ -1911,6 +2199,7 @@
                         '<img src="' + imageUrl(img.id) + '" alt="' + esc(img.title) + '">' +
                         '<figcaption>' +
                         '<strong>' + esc(img.title) + '</strong>' +
+                        '<span>📁 ' + esc(img.folder || 'General') + '</span>' +
                         (img.caption ? '<span>' + esc(img.caption) + '</span>' : '') +
                         '</figcaption>' +
                         '<div class="gallery-admin-actions">' +
@@ -1947,6 +2236,8 @@
 
             var jobs = [];
             for (var i = 0; i < files.length; i++) jobs.push(toDataUrl(files[i]));
+            // keep the chosen folder after reset() below
+            var chosenFolder = $('gallery-folder').value;
 
             Promise.all(jobs).then(function (dataUrls) {
                 return fetch(new URL(API_URL, window.location.href).toString() + '?resource=gallery_images', {
@@ -1955,6 +2246,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         images: dataUrls,
+                        folder: $('gallery-folder').value.trim() || 'General',
                         title: $('gallery-title').value.trim(),
                         caption: $('gallery-caption').value.trim()
                     })
@@ -1971,6 +2263,7 @@
                     toast(saved + (saved === 1 ? ' image' : ' images') + ' published to the website 🎉');
                 }
                 $('gallery-upload-form').reset();
+                $('gallery-folder').value = chosenFolder;
                 loadGallery();
             }).catch(function (error) {
                 toast(error.message, true);
@@ -2028,6 +2321,87 @@
 
         loadGallery();
     }
+
+    /* ================= auto re-auth lock =================
+       Leaving the admin area (visiting the public site, closing the tab, or
+       switching apps for a while) locks the panel. Coming back requires the
+       password again — without logging the session out server-side. */
+
+    function installReauthLock() {
+        var STORE = 'lecAdminUnlocked';
+        var LEFT = 'lecLeftAdminAt';
+        var GRACE_MS = 2 * 60 * 1000; // brief grace period for quick back-and-forth
+
+        function markUnlocked() {
+            try { sessionStorage.setItem(STORE, '1'); } catch (e) { /* ignore */ }
+        }
+
+        function lock() {
+            try { sessionStorage.removeItem(STORE); } catch (e) { /* ignore */ }
+        }
+
+        function isUnlocked() {
+            try { return sessionStorage.getItem(STORE) === '1'; } catch (e) { return false; }
+        }
+
+        function forceRelogin() {
+            api('auth', { method: 'POST', action: 'logout' }).catch(function () { /* ignore */ }).then(function () {
+                setCsrfToken('');
+                window.location.reload();
+            });
+        }
+
+        // Arriving on an admin page after visiting the public site → force re-auth.
+        try {
+            var leftAt = Number(sessionStorage.getItem(LEFT) || 0);
+            if (leftAt) {
+                sessionStorage.removeItem(LEFT);
+                if (Date.now() - leftAt > GRACE_MS) {
+                    lock(); // require re-auth
+                }
+            }
+        } catch (e) { /* ignore */ }
+
+        // Record when the admin navigates to the public site.
+        document.addEventListener('click', function (event) {
+            var link = event.target && event.target.closest && event.target.closest('a[href]');
+            if (!link) return;
+            var href = link.getAttribute('href') || '';
+            if (/view website/i.test(link.textContent) || /index\.html($|#)/.test(href) || href === '../') {
+                try { sessionStorage.setItem('lecLeftAdminAt', String(Date.now())); } catch (e) { /* ignore */ }
+            }
+        }, true);
+
+        // Leaving the tab for longer than the grace period also locks the panel.
+        var hiddenAt = 0;
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) {
+                hiddenAt = Date.now();
+            } else if (hiddenAt && (Date.now() - hiddenAt) > GRACE_MS) {
+                lock();
+                window.location.reload(); // boot() will show the login overlay
+            }
+        });
+
+        // Wrap boot: if the panel is locked, end the session and show the login overlay.
+        var originalBoot = boot;
+        boot = function () {
+            if (isUnlocked()) {
+                originalBoot();
+                return;
+            }
+            forceRelogin();
+        };
+
+        // After a successful login, mark the panel as unlocked.
+        var originalSetUser = setUser;
+        setUser = function (user) {
+            if (user) markUnlocked();
+            originalSetUser(user);
+        };
+    }
+
+    installReauthLock();
 
     /* ================= boot ================= */    function boot() {
         wireLogout();

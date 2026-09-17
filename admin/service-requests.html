@@ -94,6 +94,26 @@
                     <p>Update the status as you contact and schedule each customer.</p>
                 </div>
 
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" id="sr-tab-service" class="admin-primary-button">🔧 Car Requests</button>
+                    <button type="button" id="sr-tab-apprentice" class="cancel-button">🎓 Apprenticeship Applications</button>
+                </div>
+
+            </div>
+
+            <!-- APPRENTICESHIP DETAILS PANEL -->
+            <div class="admin-form-panel" id="sr-apprentice-panel" hidden>
+
+                <div class="panel-header">
+                    <div>
+                        <h2>Apprenticeship Application <span id="sr-apprentice-label"></span></h2>
+                        <p>Full applicant details. Call the applicant when approved.</p>
+                    </div>
+                    <button type="button" class="cancel-button" id="sr-apprentice-close">Close</button>
+                </div>
+
+                <dl class="track-details" id="sr-apprentice-details" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0;"></dl>
+
             </div>
 
 
@@ -204,6 +224,10 @@
                                 <option value="Declined">Declined</option>
 
                                 <option value="Completed">Completed</option>
+
+                                <option value="Car Fixed">Car Fixed</option>
+
+                                <option value="Not Done">Not Done</option>
 
                                 <option value="Closed">Closed</option>
 

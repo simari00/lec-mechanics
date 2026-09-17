@@ -31,8 +31,10 @@
         <nav class="nav-links">
             <a href="../index.html">Home</a>
             <a href="services.html" class="active">Services</a>
+            <a href="gallery.html">Gallery</a>
             <a href="about.html">About</a>
             <a href="contact.html">Contact</a>
+            <a href="track.html">Track</a>
             <a href="../admin/dashboard.html">Admin</a>
         </nav>
 
@@ -504,8 +506,8 @@
             workshop environment.
         </p>
 
-        <a href="contact.html" class="primary-button">
-            Enquire About Apprenticeship →
+        <a href="#apprenticeship-form" class="primary-button">
+            Apply For Apprenticeship ↓
         </a>
 
     </div>
@@ -513,6 +515,113 @@
 
     <div class="apprenticeship-icon">
         <img src="../images/icons/training.jpg" alt="Apprentice training in a modern workshop">
+    </div>
+
+</section>
+
+
+
+<!-- ================= APPRENTICESHIP APPLICATION FORM ================= -->
+
+<section class="enquiry-section" id="apprenticeship-form">
+
+    <div class="enquiry-inner">
+
+        <div class="enquiry-intro">
+
+            <span>APPRENTICESHIP APPLICATION</span>
+
+            <h2>
+                Start your<br>
+                career with us.
+            </h2>
+
+            <p>
+                Fill in the form to apply for an apprenticeship
+                position at LEC Mechanics. If your application is
+                approved, we will call you on the phone number
+                you provide.
+            </p>
+
+            <ul>
+                <li>Applications are reviewed by our admin team</li>
+                <li>Track your application status with your code</li>
+                <li>Shortlisted applicants are contacted by phone</li>
+            </ul>
+
+        </div>
+
+        <div class="enquiry-form-panel">
+
+            <h3>Apply for an Apprenticeship</h3>
+
+            <p>All fields marked * are required.</p>
+
+            <form id="apprenticeship-form-el" class="enquiry-form" novalidate>
+
+                <div class="enquiry-grid">
+
+                    <div class="enquiry-field">
+                        <label for="app-first-name">NAME *</label>
+                        <input type="text" id="app-first-name" name="firstName" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-last-name">SURNAME *</label>
+                        <input type="text" id="app-last-name" name="lastName" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-age">AGE *</label>
+                        <input type="number" id="app-age" name="age" min="15" max="60" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-phone">PHONE NUMBER *</label>
+                        <input type="tel" id="app-phone" name="phone" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-o-level">O LEVEL QUALIFICATIONS *</label>
+                        <input type="text" id="app-o-level" name="oLevel" placeholder="e.g. 5 subjects passed including Maths" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-a-level">A LEVEL QUALIFICATIONS</label>
+                        <input type="text" id="app-a-level" name="aLevel" placeholder="Leave blank if not completed">
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-technical">TECHNICAL SUBJECTS *</label>
+                        <input type="text" id="app-technical" name="technical" placeholder="e.g. Fitting, Machining, Motor Mechanics" required>
+                    </div>
+
+                    <div class="enquiry-field">
+                        <label for="app-licence">DRIVER'S LICENCE</label>
+                        <select id="app-licence" name="licence">
+                            <option value="None">None</option>
+                            <option value="Class 4">Class 4</option>
+                            <option value="Class 2">Class 2</option>
+                            <option value="Class 1">Class 1</option>
+                        </select>
+                    </div>
+
+                    <div class="enquiry-field full-width">
+                        <label for="app-message">WHY DO YOU WANT TO BE A MECHANIC? *</label>
+                        <textarea id="app-message" name="message" rows="3" required
+                            placeholder="Tell us briefly why we should consider your application..."></textarea>
+                    </div>
+
+                </div>
+
+                <p class="form-feedback" hidden></p>
+
+                <button type="submit">Submit Application</button>
+
+            </form>
+
+        </div>
+
     </div>
 
 </section>

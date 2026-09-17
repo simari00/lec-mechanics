@@ -329,7 +329,120 @@
         });
     }
 
-    /* ---------------- SERVICE TRACKER (track.html) ---------------- */
+    /* ---------------- APPRENTICESHIP APPLICATION FORM (services.html) ---------------- */
+
+    var appForm = document.getElementById('apprenticeship-form-el');
+    if (appForm) {
+        var appFeedback = appForm.querySelector('.form-feedback');
+        var appButton = appForm.querySelector('button[type="submit"]');
+
+        var showAppFeedback = function (message, isError) {
+            if (!appFeedback) return;
+            appFeedback.textContent = message;
+            appFeedback.classList.toggle('form-error', Boolean(isError));
+            appFeedback.classList.toggle('form-success', !isError);
+            appFeedback.hidden = false;
+        };
+
+        appForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var data = {
+                request_type: 'Apprenticeship',
+                full_name: (appForm.firstName.value.trim() + ' ' + appForm.lastName.value.trim()).trim(),
+                first_name: appForm.firstName.value.trim(),
+                last_name: appForm.lastName.value.trim(),
+                age: appForm.age.value ? Number(appForm.age.value) : null,
+                phone: appForm.phone.value.trim(),
+                o_level_results: appForm.oLevel.value.trim() || null,
+                a_level_results: appForm.aLevel.value.trim() || null,
+                technical_subjects: appForm.technical.value.trim() || null,
+                drivers_licence: appForm.licence.value || 'None',
+                message: appForm.message.value.trim()
+            };
+
+            if (!data.first_name || !data.last_name || !data.phone || !data.message) {
+                showAppFeedback('Please fill in your name, surname, phone number and motivation.', true);
+                return;
+            }
+
+            if (appButton) {
+                appButton.disabled = true;
+                appButton.textContent = 'Submitting...';
+            }
+
+            fetch('/api?resource=service_requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+                .then(function (response) {
+                    return response.json().then(function (result) {
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Submission failed.');
+                        }
+                        return result;
+                    });
+                })
+                .then(function (result) {
+                    var code = result && result.tracking_code;
+                    showAppFeedback(
+                        'Thank you! Your application has been received.' +
+                        (code
+                            ? ' Your tracking code is ' + code +
+                              ' — save it and use it on the Track page to see if you have been approved.'
+                            : ' We will get back to you shortly.'),
+                        false
+                    );
+                    appForm.reset();
+                })
+                .catch(function () {
+                    showAppFeedback(
+                        'We could not submit your application right now. Please call us on 0771 232 171.',
+                        true
+                    );
+                })
+                .finally(function () {
+                    if (appButton) {
+                        appButton.disabled = false;
+                        appButton.textContent = 'Submit Application';
+                    }
+                });
+        });
+    }
+
+    /* ---------------- LEGAL FOOTER BAR (every public page, admin excluded) ---------------- */
+
+    (function buildLegalBar() {
+        if (document.body.classList.contains('admin-body')) return;
+        if (document.getElementById('lec-legal-bar')) return;
+
+        var path = window.location.pathname.replace(/\\/g, '/');
+        var inPages = /(^|\/)pages\//.test(path);
+        var prefix = inPages ? '' : 'pages/';
+        if (/terms|privacy|cookies/.test(path)) return; // the legal pages already link between themselves
+
+        var bar = document.createElement('div');
+        bar.id = 'lec-legal-bar';
+        bar.style.cssText =
+            'display:flex;flex-wrap:wrap;gap:6px 22px;justify-content:center;align-items:center;' +
+            'padding:14px 20px;font-size:12.5px;border-top:1px solid rgba(128,128,128,.2);' +
+            'background:rgba(128,128,128,.06);';
+        bar.innerHTML =
+            '<a href="' + prefix + 'terms.html">Terms &amp; Conditions</a>' +
+            '<a href="' + prefix + 'privacy.html">Privacy Policy</a>' +
+            '<a href="' + prefix + 'cookies.html">Cookies Preferences</a>' +
+            '<span style="opacity:.55;">Functional cookies only — no advertising trackers.</span>';
+        bar.querySelectorAll('a').forEach(function (a) {
+            a.style.cssText = 'text-decoration:none;font-weight:600;';
+            a.addEventListener('mouseenter', function () { a.style.textDecoration = 'underline'; });
+            a.addEventListener('mouseleave', function () { a.style.textDecoration = 'none'; });
+        });
+
+        // Place the bar just before the footer (or at the end of the body).
+        var footer = document.querySelector('footer.site-footer') || document.querySelector('footer.footer') || document.body;
+        footer.parentNode.insertBefore(bar, footer);
+    })();
 
     (function serviceTracker() {
         var form = document.getElementById('track-form');
@@ -349,7 +462,6 @@
             { key: 'Completed',  label: 'Service Completed',       note: 'The work is done. Thank you for choosing LEC Mechanics.' }
         ];
         var STEP_FOR_STATUS = { 'New': 0, 'Contacted': 1, 'Approved': 2, 'Scheduled': 3, 'Completed': 4 };
-
         function esc(value) {
             return String(value === null || value === undefined ? '' : value)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -373,16 +485,39 @@
             if (!resultBox) return;
             var status = request.status || 'New';
             var code = esc(request.tracking_code || '');
+            var isApprenticeship = (request.request_type || '') === 'Apprenticeship';
 
-            if (status === 'Declined' || status === 'Closed') {
-                var closedNote = status === 'Declined'
-                    ? 'Unfortunately this request was not approved. Please call us on 0771 232 171 to discuss it.'
-                    : 'This request has been closed. If you still need service, please submit a new request or call us.';
+            /* ---- FINAL STATES ---- */
+
+            // Car fixed: green success card.
+            if (status === 'Car Fixed' || status === 'Completed') {
+                resultBox.innerHTML =
+                    '<div class="track-card track-success">' +
+                        '<span class="track-status-pill track-pill-success">✔ Car Fixed</span>' +
+                        '<h3>Your car is fixed! 🎉</h3>' +
+                        '<p>All work has been completed. You can collect your vehicle at your convenience — ' +
+                        'or call us on 0771 232 171 to arrange anything further.</p>' +
+                        '<dl class="track-details">' +
+                            '<div><dt>Code</dt><dd>' + code + '</dd></div>' +
+                            '<div><dt>Service</dt><dd>' + esc(request.service_name || request.request_type) + '</dd></div>' +
+                            '<div><dt>Vehicle</dt><dd>' + esc(request.registration_number || '—') + '</dd></div>' +
+                            '<div><dt>Submitted</dt><dd>' + fmtDate(request.created_at) + '</dd></div>' +
+                            '<div><dt>Last update</dt><dd>' + fmtDate(request.updated_at) + '</dd></div>' +
+                        '</dl>' +
+                    '</div>';
+                resultBox.hidden = false;
+                return;
+            }
+
+            // Not done: red card with a clear explanation.
+            if (status === 'Not Done') {
                 resultBox.innerHTML =
                     '<div class="track-card track-declined">' +
-                        '<span class="track-status-pill">' + esc(status) + '</span>' +
-                        '<h3>Request ' + esc(status) + '</h3>' +
-                        '<p>' + closedNote + '</p>' +
+                        '<span class="track-status-pill track-pill-declined">✖ Not Done</span>' +
+                        '<h3>We could not complete this job</h3>' +
+                        '<p>Unfortunately we were unable to fix this vehicle due to circumstances beyond our control ' +
+                        '(for example unavailable parts or a fault we could not reproduce). ' +
+                        'Please call us on 0771 232 171 to discuss the way forward.</p>' +
                         '<dl class="track-details">' +
                             '<div><dt>Code</dt><dd>' + code + '</dd></div>' +
                             '<div><dt>Service</dt><dd>' + esc(request.service_name || request.request_type) + '</dd></div>' +
@@ -393,6 +528,60 @@
                 return;
             }
 
+            // Declined (service request) or disapproved (apprenticeship).
+            if (status === 'Declined' || status === 'Closed') {
+                var closedNote = status === 'Declined'
+                    ? (isApprenticeship
+                        ? 'Unfortunately your apprenticeship application was not successful this time. Keep trying — new intakes open regularly.'
+                        : 'Unfortunately this request was not approved. Please call us on 0771 232 171 to discuss it.')
+                    : 'This request has been closed. If you still need service, please submit a new request or call us.';
+                resultBox.innerHTML =
+                    '<div class="track-card track-declined">' +
+                        '<span class="track-status-pill">' + esc(status) + '</span>' +
+                        '<h3>Request ' + esc(status) + '</h3>' +
+                        '<p>' + closedNote + '</p>' +
+                        '<dl class="track-details">' +
+                            '<div><dt>Code</dt><dd>' + code + '</dd></div>' +
+                            '<div><dt>Type</dt><dd>' + esc(request.request_type) + '</dd></div>' +
+                            '<div><dt>Submitted</dt><dd>' + fmtDate(request.created_at) + '</dd></div>' +
+                        '</dl>' +
+                    '</div>';
+                resultBox.hidden = false;
+                return;
+            }
+
+            /* ---- APPRENTICESHIP PROGRESS ---- */
+            if (isApprenticeship) {
+                var appSteps = [
+                    { key: 'New',      label: 'Application Received', note: 'Your apprenticeship application is in our system and waiting for review.' },
+                    { key: 'Approved', label: 'Application Approved ✅', note: 'Congratulations! Your application has been approved. Our team will call you on the number you provided to discuss the next steps.' }
+                ];
+                var appIndex = status === 'Approved' || status === 'Scheduled' ? 1 : 0;
+                var appStepsHtml = appSteps.map(function (step, index) {
+                    var state = index < appIndex ? 'done' : (index === appIndex ? 'current' : 'todo');
+                    return '<li class="track-step ' + state + '">' +
+                        '<span class="track-step-dot"></span>' +
+                        '<div><strong>' + esc(step.label) + '</strong>' +
+                        (state === 'current' ? '<p>' + esc(step.note) + '</p>' : '') +
+                        '</div></li>';
+                }).join('');
+                resultBox.innerHTML =
+                    '<div class="track-card">' +
+                        '<span class="track-status-pill">' + esc(status === 'Scheduled' ? 'Approved' : status) + '</span>' +
+                        '<h3>' + esc(appSteps[appIndex].label) + '</h3>' +
+                        '<p>' + esc(appSteps[appIndex].note) + '</p>' +
+                        '<ol class="track-steps">' + appStepsHtml + '</ol>' +
+                        '<dl class="track-details">' +
+                            '<div><dt>Code</dt><dd>' + code + '</dd></div>' +
+                            '<div><dt>Applicant</dt><dd>' + esc(request.full_name) + '</dd></div>' +
+                            '<div><dt>Submitted</dt><dd>' + fmtDate(request.created_at) + '</dd></div>' +
+                        '</dl>' +
+                    '</div>';
+                resultBox.hidden = false;
+                return;
+            }
+
+            /* ---- SERVICE PROGRESS (steps) ---- */
             var current = STEP_FOR_STATUS[status] !== undefined ? STEP_FOR_STATUS[status] : 0;
             var stepsHtml = STEPS.map(function (step, index) {
                 var state = index < current ? 'done' : (index === current ? 'current' : 'todo');

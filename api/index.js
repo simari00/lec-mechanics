@@ -17,7 +17,7 @@ const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const MAX_ADMINS = 10;
+const MAX_ADMINS = 5;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 const GALLERY_MAX_BYTES = 5 * 1024 * 1024;
@@ -98,7 +98,7 @@ function resourceDefinitions() {
     },
     service_requests: {
       table: 'service_requests',
-      fields: ['request_type', 'full_name', 'phone', 'email', 'registration_number', 'service_name', 'preferred_date', 'message', 'status', 'tracking_code'],
+      fields: ['request_type', 'full_name', 'phone', 'email', 'registration_number', 'service_name', 'preferred_date', 'message', 'status', 'tracking_code', 'first_name', 'last_name', 'age', 'o_level_results', 'a_level_results', 'technical_subjects', 'drivers_licence'],
       required: ['full_name', 'phone', 'message'],
     },
   };
@@ -152,7 +152,7 @@ function describeRecord(body) {
 
 function signToken(user) {
   return jwt.sign({ sub: String(user.id), email: user.email, name: user.full_name, role: user.role },
-    process.env.JWT_SECRET, { expiresIn: '7d' });
+    process.env.JWT_SECRET, { expiresIn: '12h' });
 }
 
 function readCookie(req, name) {
@@ -166,7 +166,7 @@ function readCookie(req, name) {
 
 function setSessionCookie(res, token) {
   setHeader(res, 'Set-Cookie',
-    `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 3600}`);
+    `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${12 * 3600}`);
 }
 
 function clearSessionCookie(res) {
@@ -178,8 +178,13 @@ async function currentUser(req) {
   if (!token) return null;
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await db().query('SELECT id, full_name, email, role FROM users WHERE id = $1 AND is_active', [payload.sub]);
-    return result.rows[0] || null;
+    const result = await db().query(
+      'SELECT id, full_name, email, role, approval_status FROM users WHERE id = $1 AND is_active', [payload.sub]);
+    const row = result.rows[0];
+    // Pending/rejected accounts are logged out automatically.
+    if (!row || row.approval_status !== 'approved') return null;
+    delete row.approval_status;
+    return row;
   } catch {
     return null;
   }
@@ -266,6 +271,8 @@ async function handleGallery(req, res, method, id, user, url) {
     const saved = [];
     const errors = [];
     const body = req.body || {};
+    // Folder (project portfolio) this upload belongs to. Sanitised to a safe label.
+    const folder = String(body.folder || 'General').trim().replace(/[<>"'\\]/g, '').slice(0, 80) || 'General';
 
     const files = [];
     if (body.images) {
@@ -284,9 +291,9 @@ async function handleGallery(req, res, method, id, user, url) {
       const ext = GALLERY_EXT[file.mime];
       const filename = 'img_' + require('crypto').randomBytes(6).toString('hex') + '.' + ext;
       await client.query(
-        'INSERT INTO gallery_images (filename, title, caption, uploaded_by, mime_type, data) VALUES ($1, $2, $3, $4, $5, $6)',
+        'INSERT INTO gallery_images (filename, title, caption, uploaded_by, mime_type, data, folder) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [filename, (body.title || 'Photo').slice(0, 120), (body.caption || '').slice(0, 300), user.full_name,
-         file.mime, file.buffer.toString('base64')]);
+         file.mime, file.buffer.toString('base64'), folder]);
       await logActivity(client, 'create', 'gallery_images', null, body.title, user);
       saved.push({ filename, title: body.title });
     }
@@ -311,7 +318,12 @@ async function handleGallery(req, res, method, id, user, url) {
   }
 
   const result = await client.query('SELECT * FROM gallery_images ORDER BY id DESC');
-  return json(res, { data: result.rows });
+  const folders = {};
+  for (const row of result.rows) {
+    const f = row.folder || 'General';
+    folders[f] = (folders[f] || 0) + 1;
+  }
+  return json(res, { data: result.rows, folders });
 }
 
 /* ---------------------------- main handler ---------------------------- */
@@ -350,18 +362,48 @@ module.exports = async (req, res) => {
 
       if (action === 'create-admin' && method === 'POST') {
         const user = await requireAuth(req, res); if (!user) return;
+        // Only the master account may create admin accounts.
+        if (user.role !== 'master') return fail(res, 'Only the master admin account can create new admin accounts.', 403);
         const passwordError = passwordRule(body.password);
         if (!body.email || passwordError || !body.full_name) return fail(res, passwordError || 'full_name and a valid email are required.', 422);
+        if (body.confirm_password !== undefined && body.confirm_password !== body.password) return fail(res, 'Password confirmation does not match the password.', 422);
         if (!body.security_question || !body.security_answer) return fail(res, 'A security question and answer are required.', 422);
-        const count = await db().query('SELECT COUNT(*)::int AS n FROM users');
-        if (count.rows[0].n >= MAX_ADMINS) return fail(res, `The maximum of ${MAX_ADMINS} admin accounts already exists.`, 409);
+        const count = await db().query("SELECT COUNT(*)::int AS n FROM users WHERE approval_status = 'approved'");
+        if (count.rows[0].n >= MAX_ADMINS) return fail(res, `The maximum of ${MAX_ADMINS} approved admin accounts already exists.`, 409);
         const dupe = await db().query('SELECT 1 FROM users WHERE email = $1', [body.email.toLowerCase().trim()]);
         if (dupe.rows.length) return fail(res, 'An account with this email already exists.', 409);
         await db().query(
-          'INSERT INTO users (full_name, email, password_hash, role, security_question, security_answer_hash) VALUES ($1, $2, $3, $4, $5, $6)',
+          'INSERT INTO users (full_name, email, password_hash, role, security_question, security_answer_hash, approval_status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
           [body.full_name.trim(), body.email.toLowerCase().trim(), await bcrypt.hash(body.password, 10), 'admin',
-           body.security_question, await bcrypt.hash(normalizeAnswer(body.security_answer), 10)]);
-        return json(res, { success: true, message: 'Admin account created.' }, 201);
+           body.security_question, await bcrypt.hash(normalizeAnswer(body.security_answer), 10), 'pending']);
+        await logActivity(db(), 'create', 'users', null, `Admin account request: ${body.email}`, user);
+        return json(res, { success: true, message: 'Admin account created. It stays locked until the master admin approves it.' }, 201);
+      }
+
+      // Master admin: list pending admin-account requests
+      if (action === 'pending-users' && method === 'GET') {
+        const user = await requireAuth(req, res); if (!user) return;
+        if (user.role !== 'master') return fail(res, 'Only the master admin account can review account requests.', 403);
+        const result = await db().query(
+          'SELECT id, full_name, email, role, approval_status, created_at FROM users WHERE approval_status = $1 ORDER BY id ASC', ['pending']);
+        return json(res, { data: result.rows });
+      }
+
+      // Master admin: approve or reject an admin account
+      if ((action === 'approve-user' || action === 'reject-user') && method === 'POST') {
+        const user = await requireAuth(req, res); if (!user) return;
+        if (user.role !== 'master') return fail(res, 'Only the master admin account can approve or reject accounts.', 403);
+        const targetId = Number(body.id);
+        if (!targetId) return fail(res, 'An account id is required.', 422);
+        const target = await db().query('SELECT id, email, approval_status FROM users WHERE id = $1', [targetId]);
+        if (!target.rows.length) return fail(res, 'Account not found.', 404);
+        if (target.rows[0].id === user.id) return fail(res, 'The master account is always approved.', 400);
+        const newStatus = action === 'approve-user' ? 'approved' : 'rejected';
+        await db().query(
+          'UPDATE users SET approval_status = $1, approved_by = $2, approved_at = now() WHERE id = $3',
+          [newStatus, user.id, targetId]);
+        await logActivity(db(), 'update', 'users', targetId, `Account ${newStatus}: ${target.rows[0].email}`, user);
+        return json(res, { success: true, message: `Account ${newStatus}.` });
       }
 
       if (action === 'set-security-question' && method === 'POST') {
@@ -398,6 +440,9 @@ module.exports = async (req, res) => {
         if (!ok) return fail(res, 'Current password is incorrect.', 401);
         const passwordError = passwordRule(body.new_password);
         if (passwordError) return fail(res, passwordError, 422);
+        if (body.confirm_password !== undefined && body.confirm_password !== body.new_password) {
+          return fail(res, 'Password confirmation does not match the new password.', 422);
+        }
         await db().query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(body.new_password, 10), user.id]);
         return json(res, { success: true, message: 'Password changed.' });
       }
@@ -422,6 +467,13 @@ module.exports = async (req, res) => {
           const left = MAX_LOGIN_ATTEMPTS - failed.failed_attempts;
           return json(res, { error: `Invalid email or password. ${left} attempt(s) remaining.` }, 401);
         }
+        // New admin accounts need master approval before they can sign in.
+        if (userRow.approval_status === 'pending') {
+          return fail(res, 'This account is waiting for approval by the master admin. You will be able to sign in once it is approved.', 403);
+        }
+        if (userRow.approval_status === 'rejected') {
+          return fail(res, 'This account request was rejected by the master admin.', 403);
+        }
         await db().query('DELETE FROM login_attempts WHERE email = $1', [email]);
         const safeUser = { id: userRow.id, full_name: userRow.full_name, email: userRow.email, role: userRow.role };
         setSessionCookie(res, signToken(safeUser));
@@ -436,8 +488,10 @@ module.exports = async (req, res) => {
       if (action === 'list-users' && method === 'GET') {
         const user = await requireAuth(req, res); if (!user) return;
         const rows = await db().query(
-          'SELECT id, full_name, email, role, (security_question IS NOT NULL) AS has_security_question, is_active, created_at FROM users ORDER BY id ASC');
-        return json(res, { data: rows.rows, max_admins: MAX_ADMINS, current_user_id: user.id });
+          'SELECT id, full_name, email, role, (security_question IS NOT NULL) AS has_security_question, is_active, approval_status, created_at FROM users ORDER BY id ASC');
+        const approved = rows.rows.filter((r) => r.approval_status === 'approved').length;
+        return json(res, { data: rows.rows, max_admins: MAX_ADMINS, current_user_id: user.id,
+          is_master: user.role === 'master', approved_count: approved });
       }
 
       if (action === 'me' && method === 'GET') {
@@ -447,12 +501,15 @@ module.exports = async (req, res) => {
           const q = await db().query('SELECT security_question FROM users WHERE id = $1', [user.id]);
           question = (q.rows[0] && q.rows[0].security_question) || null;
         }
-        const count = await db().query('SELECT COUNT(*)::int AS n FROM users');
+        const count = await db().query("SELECT COUNT(*)::int AS n FROM users WHERE approval_status = 'approved'");
+        const pending = await db().query("SELECT COUNT(*)::int AS n FROM users WHERE approval_status = 'pending'");
         return json(res, {
           authenticated: Boolean(user),
           user,
           security_question: question,
           user_count: count.rows[0].n,
+          pending_count: pending.rows[0].n,
+          is_master: Boolean(user && user.role === 'master'),
           max_admins: MAX_ADMINS,
           csrf_token: user ? 'not-used' : null,
         });
@@ -545,7 +602,8 @@ module.exports = async (req, res) => {
       const code = (url.searchParams.get('code') || '').trim().toUpperCase();
       if (!code) return fail(res, 'Enter your tracking code.', 422);
       const result = await db().query(
-        `SELECT id, request_type, full_name, service_name, registration_number, preferred_date, status, tracking_code, created_at, updated_at
+        `SELECT id, request_type, full_name, service_name, registration_number, preferred_date, status,
+                tracking_code, created_at, updated_at, first_name, last_name, message
          FROM service_requests WHERE UPPER(tracking_code) = $1 LIMIT 1`, [code]);
       if (!result.rows.length) return fail(res, 'No request found for that tracking code. Check the code and try again.', 404);
       return json(res, { found: true, request: result.rows[0] });
@@ -586,6 +644,10 @@ module.exports = async (req, res) => {
         if (isPublicRequest) {
           delete data.status;
           data.tracking_code = await generateTrackingCode(client);
+          // Apprenticeship applicants: keep full_name as "first last" for display.
+          if (data.request_type === 'Apprenticeship' && data.first_name && !data.full_name) {
+            data.full_name = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.first_name;
+          }
         }
       }
 

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="../images/favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="../images/favicon.png">
+    <link rel="apple-touch-icon" href="../images/favicon.svg">
+
+    <title>Project Portfolio | LEC Mechanics Harare</title>
+    <meta name="description" content="Browse LEC Mechanics project portfolio — photos of real jobs from our workshop, organised by project folder.">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .portfolio-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; }
+        .portfolio-folders { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .folder-card {
+            border: 1px solid rgba(128,128,128,.25); border-radius: 14px; padding: 26px 20px;
+            text-align: center; cursor: pointer; background: rgba(128,128,128,.05);
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .folder-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,.12); }
+        .folder-card .folder-icon { font-size: 40px; }
+        .folder-card h3 { margin: 10px 0 4px; font-size: 17px; }
+        .folder-card small { opacity: .65; }
+        .portfolio-back { display: inline-block; margin-bottom: 22px; text-decoration: none; font-weight: 700; opacity: .8; }
+        .portfolio-back:hover { opacity: 1; }
+        .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+        .portfolio-grid figure { margin: 0; border-radius: 12px; overflow: hidden; background: rgba(128,128,128,.08); }
+        .portfolio-grid img { width: 100%; height: 210px; object-fit: cover; display: block; }
+        .portfolio-grid figcaption { padding: 10px 12px; font-size: 13px; }
+        .portfolio-grid figcaption strong { display: block; font-size: 14px; }
+        .portfolio-pager { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 30px; }
+        .portfolio-pager button {
+            padding: 10px 22px; border: 1px solid rgba(128,128,128,.4); background: none;
+            border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700;
+        }
+        .portfolio-pager button:disabled { opacity: .35; cursor: default; }
+        .portfolio-pager span { font-size: 14px; opacity: .75; }
+        .portfolio-empty { text-align: center; padding: 60px 0; opacity: .6; }
+        @media (max-width: 640px) { .portfolio-grid img { height: 160px; } }
+    </style>
+</head>
+<body>
+    <!-- ================= NAVBAR ================= -->
+    <header class="navbar">
+        <a href="../index.html" class="logo lec-brand">
+            <span class="lec-main">LEC</span>
+            <span class="lec-sub">MECHANICS</span>
+        </a>
+        <nav class="nav-links">
+            <a href="../index.html">Home</a>
+            <a href="services.html">Services</a>
+            <a href="gallery.html" class="active">Gallery</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+            <a href="track.html">Track</a>
+            <a href="../admin/dashboard.html">Admin</a>
+        </nav>
+    </header>
+
+    <!-- ================= PAGE HERO ================= -->
+    <section class="page-hero">
+        <div>
+            <div class="section-label">PROJECT PORTFOLIO</div>
+            <h1>Our Work, <em>Folder By Folder</em></h1>
+            <p>Real jobs from our workshop — browse each project to see the vehicles, engines and repairs we handle every day.</p>
+        </div>
+    </section>
+
+    <!-- ================= PORTFOLIO ================= -->
+    <div class="portfolio-wrap">
+        <!-- FOLDER VIEW -->
+        <div id="portfolio-folders-view">
+            <div id="portfolio-folders" class="portfolio-folders">
+                <p class="portfolio-empty">Loading project folders…</p>
+            </div>
+        </div>
+
+        <!-- IMAGES VIEW -->
+        <div id="portfolio-images-view" hidden>
+            <a href="gallery.html" class="portfolio-back">← Back to all folders</a>
+            <h2 id="portfolio-folder-title" style="margin:0 0 20px;"></h2>
+            <div id="portfolio-grid" class="portfolio-grid"></div>
+            <div class="portfolio-pager">
+                <button type="button" id="portfolio-prev">← Previous</button>
+                <span id="portfolio-page-label"></span>
+                <button type="button" id="portfolio-next">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <span class="lec-main">LEC</span> <span class="lec-sub">MECHANICS</span>
+                <p>Belvedere, Rotten Row Area, Harare, Zimbabwe</p>
+            </div>
+            <div class="footer-links">
+                <a href="../index.html">Home</a>
+                <a href="services.html">Services</a>
+                <a href="contact.html">Contact</a>
+                <a href="track.html">Track Service</a>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 LEC Mechanics. All rights reserved.</div>
+    </footer>
+
+    <script src="../js/script.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        var PAGE_SIZE = 6;
+        var foldersView = document.getElementById('portfolio-folders-view');
+        var imagesView = document.getElementById('portfolio-images-view');
+        var foldersBox = document.getElementById('portfolio-folders');
+        var grid = document.getElementById('portfolio-grid');
+        var titleEl = document.getElementById('portfolio-folder-title');
+        var prevBtn = document.getElementById('portfolio-prev');
+        var nextBtn = document.getElementById('portfolio-next');
+        var pageLabel = document.getElementById('portfolio-page-label');
+
+        var images = [];
+        var folderName = '';
+        var page = 0;
+
+        function esc(v) {
+            return String(v === null || v === undefined ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function imgUrl(id) { return '../api?resource=gallery_image&id=' + encodeURIComponent(id); }
+
+        function showFolders() {
+            imagesView.hidden = true;
+            foldersView.hidden = false;
+            window.scrollTo(0, 0);
+        }
+
+        function renderPage() {
+            var start = page * PAGE_SIZE;
+            var slice = images.slice(start, start + PAGE_SIZE);
+            grid.innerHTML = slice.map(function (img) {
+                return '<figure>' +
+                    '<img src="' + imgUrl(img.id) + '" alt="' + esc(img.title) + '" loading="lazy">' +
+                    '<figcaption><strong>' + esc(img.title) + '</strong>' +
+                    (img.caption ? '<span>' + esc(img.caption) + '</span>' : '') +
+                    '</figcaption></figure>';
+            }).join('');
+            var totalPages = Math.max(Math.ceil(images.length / PAGE_SIZE), 1);
+            pageLabel.textContent = 'Page ' + (page + 1) + ' of ' + totalPages + ' — ' + images.length + ' photo(s)';
+            prevBtn.disabled = page === 0;
+            nextBtn.disabled = page >= totalPages - 1;
+        }
+
+        function openFolder(name) {
+            folderName = name;
+            page = 0;
+            titleEl.textContent = '📁 ' + name;
+            imagesView.hidden = false;
+            foldersView.hidden = true;
+            renderPage();
+            window.scrollTo(0, 0);
+        }
+
+        prevBtn.addEventListener('click', function () { if (page > 0) { page--; renderPage(); } });
+        nextBtn.addEventListener('click', function () { page++; renderPage(); });
+
+        fetch('../api?resource=gallery_images', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                var items = (result && result.data) || [];
+                var folders = (result && result.folders) || {};
+                var names = Object.keys(folders).sort();
+                if (!items.length) {
+                    foldersBox.innerHTML = '<p class="portfolio-empty">No photos published yet — check back soon.</p>';
+                    return;
+                }
+                foldersBox.innerHTML = names.map(function (name) {
+                    return '<div class="folder-card" data-folder="' + esc(name) + '">' +
+                        '<div class="folder-icon">📁</div>' +
+                        '<h3>' + esc(name) + '</h3>' +
+                        '<small>' + folders[name] + ' photo' + (folders[name] === 1 ? '' : 's') + '</small>' +
+                        '</div>';
+                }).join('');
+                foldersBox.querySelectorAll('.folder-card').forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        var name = card.getAttribute('data-folder');
+                        images = items.filter(function (img) { return (img.folder || 'General') === name; });
+                        openFolder(name);
+                    });
+                });
+            })
+            .catch(function () {
+                foldersBox.innerHTML = '<p class="portfolio-empty">Could not load the gallery. Please try again later.</p>';
+            });
+    })();
+    </script>
+</body>
+</html>

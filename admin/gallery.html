@@ -91,6 +91,14 @@
 
                     <div class="admin-form-grid">
                         <div class="form-group">
+                            <label for="gallery-folder">Folder (project portfolio)</label>
+                            <input type="text" id="gallery-folder" maxlength="80" placeholder="e.g. Engine Rebuilds" list="gallery-folder-list">
+                            <datalist id="gallery-folder-list"></datalist>
+                            <small style="color:var(--grey-2,#777);font-size:12px;">
+                                Photos are grouped into folders on the website. Use the same name for photos in the same project.
+                            </small>
+                        </div>
+                        <div class="form-group">
                             <label for="gallery-title">Title (optional)</label>
                             <input type="text" id="gallery-title" maxlength="120" placeholder="e.g. Engine rebuild">
                         </div>
