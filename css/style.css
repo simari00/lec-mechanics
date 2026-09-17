@@ -488,6 +488,11 @@ button {
     margin-bottom: 16px;
 }
 
+.section-heading.centered .primary-button,
+.section-heading.centered .secondary-button {
+    margin-top: 18px;
+}
+
 .section-heading {
     max-width: 720px;
     margin: 0 auto 50px;
