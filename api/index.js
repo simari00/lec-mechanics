@@ -669,6 +669,24 @@ module.exports = async (req, res) => {
 
     /* ---------- public tracking ---------- */
     if (resource === 'track' && method === 'GET') {
+      // Lost-code recovery: match by the phone number AND name used on the request.
+      const lookupPhone = (url.searchParams.get('phone') || '').trim();
+      if (lookupPhone) {
+        const lookupName = (url.searchParams.get('name') || '').trim();
+        const digits = lookupPhone.replace(/\D/g, '');
+        if (digits.length < 9) return fail(res, 'Enter the phone number you used on the request.', 422);
+        if (lookupName.length < 3) return fail(res, 'Enter your name too — it must match the name on the request.', 422);
+        // Match on the last 9 digits so 077... and 26377... forms both work.
+        const result = await db().query(
+          `SELECT request_type, full_name, status, tracking_code, created_at
+           FROM service_requests
+           WHERE regexp_replace(phone, '\\D', '', 'g') LIKE $1
+             AND LOWER(full_name) LIKE $2
+           ORDER BY id DESC LIMIT 5`,
+          ['%' + digits.slice(-9), '%' + lookupName.toLowerCase() + '%']);
+        return json(res, { found: result.rows.length > 0, requests: result.rows });
+      }
+
       const code = (url.searchParams.get('code') || '').trim().toUpperCase();
       if (!code) return fail(res, 'Enter your tracking code.', 422);
       const result = await db().query(

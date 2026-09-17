@@ -64,10 +64,27 @@
             </div>
             <p class="track-hint">
                 Your code was shown after you submitted the contact form (format: LEC-XXXXXX).
-                Lost it? Call us on <a href="tel:0771232171">0771 232 171</a>.
+                Lost it? <button type="button" id="lost-code-toggle" style="background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;">Look it up with your phone number</button>
+                or call us on <a href="tel:0771232171">0771 232 171</a>.
             </p>
             <p class="form-feedback" hidden></p>
         </form>
+
+        <!-- LOST CODE RECOVERY -->
+        <form id="lost-code-form" class="track-form" autocomplete="off" hidden style="margin-top:18px;">
+            <label for="lost-phone">PHONE NUMBER YOU USED *</label>
+            <div class="track-input-row">
+                <input type="tel" id="lost-phone" name="phone" placeholder="e.g. 0771234567" required>
+            </div>
+            <label for="lost-name" style="margin-top:12px;">YOUR NAME *</label>
+            <div class="track-input-row">
+                <input type="text" id="lost-name" name="name" placeholder="The name on the request" required>
+                <button type="submit">Find My Code</button>
+            </div>
+            <p class="form-feedback" hidden></p>
+        </form>
+
+        <div id="lost-result" class="track-result" hidden></div>
 
         <div id="track-result" class="track-result" hidden></div>
     </section>

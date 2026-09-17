@@ -586,6 +586,87 @@
         });
     })();
 
+    /* ---------------- LOST TRACKING CODE RECOVERY (track.html) ---------------- */
+
+    (function lostCodeLookup() {
+        var toggle = document.getElementById('lost-code-toggle');
+        var form = document.getElementById('lost-code-form');
+        if (!toggle || !form) return;
+
+        var resultBox = document.getElementById('lost-result');
+        var feedback = form.querySelector('.form-feedback');
+        var submitBtn = form.querySelector('button[type="submit"]');
+
+        toggle.addEventListener('click', function () {
+            form.hidden = !form.hidden;
+            if (!form.hidden) {
+                resultBox.hidden = true;
+                form.querySelector('#lost-phone').focus();
+            }
+        });
+
+        function esc(v) {
+            return String(v === null || v === undefined ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function showFeedback(message, isError) {
+            if (!feedback) return;
+            feedback.textContent = message;
+            feedback.classList.toggle('form-error', Boolean(isError));
+            feedback.classList.toggle('form-success', !isError);
+            feedback.hidden = false;
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var phone = form.querySelector('#lost-phone').value.trim();
+            var name = form.querySelector('#lost-name').value.trim();
+            if (phone.length < 9 || name.length < 3) {
+                showFeedback('Enter the phone number and the exact name you used on the request.', true);
+                return;
+            }
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Searching…'; }
+
+            fetch('/api?resource=track&phone=' + encodeURIComponent(phone) + '&name=' + encodeURIComponent(name), {
+                credentials: 'same-origin'
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (result) {
+                    if (!result.found || !(result.requests || []).length) {
+                        if (resultBox) resultBox.hidden = true;
+                        showFeedback(
+                            'No request found for that phone number and name. Check the spelling — ' +
+                            'or call us on 0771 232 171 and we will find it for you.', true);
+                        return;
+                    }
+                    showFeedback('');
+                    feedback.hidden = true;
+                    var rows = result.requests.map(function (r) {
+                        return '<div class="track-card" style="margin-bottom:14px;">' +
+                            '<dl class="track-details">' +
+                                '<div><dt>Type</dt><dd>' + esc(r.request_type) + '</dd></div>' +
+                                '<div><dt>Status</dt><dd>' + esc(r.status) + '</dd></div>' +
+                                '<div><dt>Your code</dt><dd><code style="font-size:17px;font-weight:800;">' + esc(r.tracking_code) + '</code></dd></div>' +
+                                '<div><dt>Submitted</dt><dd>' + esc(String(r.created_at || '').slice(0, 10)) + '</dd></div>' +
+                            '</dl>' +
+                            '</div>';
+                    }).join('');
+                    resultBox.innerHTML =
+                        '<h3 style="margin:0 0 14px;">Found ' + result.requests.length +
+                        ' request' + (result.requests.length === 1 ? '' : 's') + ' — your code' +
+                        (result.requests.length === 1 ? ' is' : 's are') + ' below:</h3>' + rows;
+                    resultBox.hidden = false;
+                })
+                .catch(function () {
+                    showFeedback('Something went wrong. Please try again or call 0771 232 171.', true);
+                })
+                .finally(function () {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Find My Code'; }
+                });
+        });
+    })();
+
     /* ---------------- LEGAL FOOTER BAR (every public page, admin excluded) ---------------- */
 
     (function buildLegalBar() {
