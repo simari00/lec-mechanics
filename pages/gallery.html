@@ -9,6 +9,12 @@
 
     <title>Project Portfolio | LEC Mechanics Harare</title>
     <meta name="description" content="Browse LEC Mechanics project portfolio — photos of real jobs from our workshop, organised by project folder.">
+    <meta property="og:title" content="Project Portfolio | LEC Mechanics">
+    <meta property="og:description" content="Browse photos of real jobs from our Harare workshop, organised by project folder.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://lec-mechanics.vercel.app/images/gallery/engine-rebuild.jpg">
+    <meta property="og:url" content="https://lec-mechanics.vercel.app/pages/gallery">
+    <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="../css/style.css">
     <style>
         .portfolio-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; }
@@ -129,7 +135,7 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function imgUrl(id) { return '../api?resource=gallery_image&id=' + encodeURIComponent(id); }
+        function imgUrl(id) { return '/api?resource=gallery_image&id=' + encodeURIComponent(id); }
 
         function showFolders() {
             imagesView.hidden = true;

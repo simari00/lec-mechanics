@@ -213,7 +213,7 @@
         return 'display:block;font-size:13px;font-weight:600;margin:12px 0 4px;';
     }
 
-    function showLogin() {
+    function showLogin(userCount) {
         if (document.getElementById('lec-login-overlay')) return;
 
         var overlay = document.createElement('div');
@@ -302,6 +302,11 @@
         wireCapsLockWarning(overlay.querySelector('#lec-login-password'), overlay.querySelector('#lec-caps-hint'));
         wirePasswordEyes(overlay);
         wirePasswordMatch(overlay.querySelector('#lec-login-password'), overlay.querySelector('#lec-setup-confirm'), overlay.querySelector('#lec-setup-match-hint'));
+
+        // The one-time setup link only makes sense before any account exists.
+        if (userCount !== undefined && userCount > 0) {
+            setupToggle.style.display = 'none';
+        }
 
         var forgotForm = overlay.querySelector('#lec-forgot-form');
         var forgotToggle = overlay.querySelector('#lec-forgot-toggle');
@@ -2427,7 +2432,7 @@
                 boot();
             } else {
                 setCsrfToken('');
-                showLogin();
+                showLogin(result.user_count);
             }
         }).catch(function () {
             setCsrfToken('');
