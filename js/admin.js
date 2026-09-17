@@ -2405,7 +2405,6 @@
     function installReauthLock() {
         var STORE = 'lecAdminUnlocked';
         var LEFT = 'lecLeftAdminAt';
-        var GRACE_MS = 2 * 60 * 1000; // brief grace period for quick back-and-forth
 
         function markUnlocked() {
             try { sessionStorage.setItem(STORE, '1'); } catch (e) { /* ignore */ }
@@ -2426,33 +2425,36 @@
             });
         }
 
-        // Arriving on an admin page after visiting the public site → force re-auth.
-        try {
-            var leftAt = Number(sessionStorage.getItem(LEFT) || 0);
-            if (leftAt) {
-                sessionStorage.removeItem(LEFT);
-                if (Date.now() - leftAt > GRACE_MS) {
-                    lock(); // require re-auth
-                }
-            }
-        } catch (e) { /* ignore */ }
-
-        // Record when the admin navigates to the public site.
+        // ANY click through to the public site locks the panel immediately —
+        // returning to the admin area always requires signing in again.
         document.addEventListener('click', function (event) {
             var link = event.target && event.target.closest && event.target.closest('a[href]');
             if (!link) return;
             var href = link.getAttribute('href') || '';
-            if (/view website/i.test(link.textContent) || /index\.html($|#)/.test(href) || href === '../') {
-                try { sessionStorage.setItem('lecLeftAdminAt', String(Date.now())); } catch (e) { /* ignore */ }
+            if (/^(#|mailto:|tel:|javascript:)/.test(href)) return;
+            var goesPublic = href.charAt(0) === '.' &&   // public links leave the /admin folder
+                !/^\.\/[^/]*\.html$/.test(href) &&      // but ./name.html is an admin page
+                !/^\.\/admin/.test(href);
+            if (goesPublic) {
+                try { sessionStorage.removeItem(LEFT); } catch (e) { /* ignore */ }
+                try { sessionStorage.setItem(LEFT, String(Date.now())); } catch (e) { /* ignore */ }
             }
         }, true);
 
-        // Leaving the tab for longer than the grace period also locks the panel.
+        // Arriving on any admin page after having been on the public site → instant re-auth.
+        try {
+            if (sessionStorage.getItem(LEFT)) {
+                sessionStorage.removeItem(LEFT);
+                lock(); // no grace period — instant lock
+            }
+        } catch (e) { /* ignore */ }
+
+        // Leaving the tab for more than a moment also locks the panel.
         var hiddenAt = 0;
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 hiddenAt = Date.now();
-            } else if (hiddenAt && (Date.now() - hiddenAt) > GRACE_MS) {
+            } else if (hiddenAt && (Date.now() - hiddenAt) > 30 * 1000) {
                 lock();
                 window.location.reload(); // boot() will show the login overlay
             }
