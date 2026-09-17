@@ -20,7 +20,9 @@ const bcrypt = require('bcryptjs');
 const MAX_ADMINS = 5;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
-const GALLERY_MAX_BYTES = 5 * 1024 * 1024;
+const GALLERY_MAX_BYTES = 8 * 1024 * 1024;
+const THUMB_MAX_BYTES = 160 * 1024;      // thumbnails ~ 400px, < 160KB
+const LIST_PAGE_SIZE = 60;               // gallery list pagination
 const COOKIE_NAME = 'lec_session';
 
 let pool = null;
@@ -318,12 +320,22 @@ function parseDataUrl(dataUrl) {
 const GALLERY_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 
 /** GET /api?resource=gallery_image&id=N — streams one image's bytes back. */
-async function serveGalleryImage(res, id) {
-  const result = await db().query('SELECT mime_type, data FROM gallery_images WHERE id = $1', [id]);
-  if (!result.rows.length || !result.rows[0].data) { res.statusCode = 404; return res.end('Not found'); }
-  const buffer = Buffer.from(result.rows[0].data, 'base64');
-  setHeader(res, 'Content-Type', result.rows[0].mime_type || 'image/jpeg');
-  setHeader(res, 'Cache-Control', 'public, max-age=86400');
+async function serveGalleryImage(res, id, wantThumb) {
+  const column = wantThumb ? 'thumb_data' : 'data';
+  const fallback = wantThumb ? 'thumb_data = \'\' OR thumb_data IS NULL' : null;
+  const query = wantThumb
+    ? `SELECT mime_type, thumb_data, data FROM gallery_images WHERE id = $1`
+    : `SELECT mime_type, data FROM gallery_images WHERE id = $1`;
+  const result = await db().query(query, [id]);
+  const row = result.rows[0];
+  if (!row) { res.statusCode = 404; return res.end('Not found'); }
+  let base64 = wantThumb ? row.thumb_data : row.data;
+  if (!base64) base64 = row.data;            // thumbnail missing? serve the full image
+  if (!base64) { res.statusCode = 404; return res.end('Not found'); }
+  const buffer = Buffer.from(base64, 'base64');
+  setHeader(res, 'Content-Type', row.mime_type || 'image/jpeg');
+  // Images are immutable content — let browsers and CDNs cache them hard.
+  setHeader(res, 'Cache-Control', 'public, max-age=31536000, immutable');
   res.statusCode = 200;
   res.end(buffer);
 }
@@ -332,8 +344,9 @@ async function handleGallery(req, res, method, id, user, url) {
   const client = db();
 
   // Public image streaming (no auth): /api?resource=gallery_image&id=N
+  // ?thumb=1 serves the small preview version.
   if (method === 'GET' && id) {
-    return serveGalleryImage(res, id);
+    return serveGalleryImage(res, id, url.searchParams.get('thumb') === '1');
   }
 
   if (method === 'POST' && !id) {
@@ -357,13 +370,19 @@ async function handleGallery(req, res, method, id, user, url) {
     if (!files.length) return fail(res, 'No file uploaded. Attach image files in the "images" field.', 422);
 
     for (const file of files) {
-      if (file.buffer.length > GALLERY_MAX_BYTES) { errors.push('One image is larger than 5 MB.'); continue; }
+      if (file.buffer.length > GALLERY_MAX_BYTES) { errors.push('One image is larger than 8 MB.'); continue; }
       const ext = GALLERY_EXT[file.mime];
       const filename = 'img_' + require('crypto').randomBytes(6).toString('hex') + '.' + ext;
+      // The client sends an already-resized thumbnail alongside each image
+      // (see admin gallery JS). Fall back to the full image if absent.
+      const thumbDataUrl = Array.isArray(body.thumbs) ? body.thumbs[saved.length] : null;
+      const parsedThumb = parseDataUrl(thumbDataUrl);
+      const thumbBase64 = parsedThumb && parsedThumb.buffer.length <= THUMB_MAX_BYTES
+        ? parsedThumb.buffer.toString('base64') : null;
       await client.query(
-        'INSERT INTO gallery_images (filename, title, caption, uploaded_by, mime_type, data, folder) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        'INSERT INTO gallery_images (filename, title, caption, uploaded_by, mime_type, data, folder, thumb_data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
         [filename, (body.title || 'Photo').slice(0, 120), (body.caption || '').slice(0, 300), user.full_name,
-         file.mime, file.buffer.toString('base64'), folder]);
+         file.mime, file.buffer.toString('base64'), folder, thumbBase64 || '']);
       await logActivity(client, 'create', 'gallery_images', null, body.title, user);
       saved.push({ filename, title: body.title });
     }
@@ -387,13 +406,35 @@ async function handleGallery(req, res, method, id, user, url) {
     return json(res, { success: true, deleted: 1 });
   }
 
-  const result = await client.query('SELECT * FROM gallery_images ORDER BY id DESC');
-  const folders = {};
-  for (const row of result.rows) {
-    const f = row.folder || 'General';
-    folders[f] = (folders[f] || 0) + 1;
+  // List: metadata only — NEVER the image bytes (keeps the response small
+  // even with 10,000 photos). Paginated + folder summaries.
+  const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || LIST_PAGE_SIZE, 1), 200);
+  const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+  const folderFilter = (url.searchParams.get('folder') || '').trim();
+  const total = await client.query('SELECT COUNT(*)::int AS n FROM gallery_images');
+  let result;
+  if (folderFilter) {
+    result = await client.query(
+      'SELECT id, filename, title, caption, folder, uploaded_by, mime_type, created_at FROM gallery_images WHERE folder = $1 ORDER BY id DESC LIMIT $2 OFFSET $3',
+      [folderFilter, limit, offset]);
+  } else {
+    result = await client.query(
+      'SELECT id, filename, title, caption, folder, uploaded_by, mime_type, created_at FROM gallery_images ORDER BY id DESC LIMIT $1 OFFSET $2',
+      [limit, offset]);
   }
-  return json(res, { data: result.rows, folders });
+  const folders = {};
+  const folderRows = await client.query('SELECT folder, COUNT(*)::int AS n FROM gallery_images GROUP BY folder ORDER BY folder ASC');
+  for (const row of folderRows.rows) {
+    folders[row.folder || 'General'] = row.n;
+  }
+  return json(res, {
+    data: result.rows,
+    folders,
+    total: total.rows[0].n,
+    limit,
+    offset,
+    hasMore: offset + result.rows.length < total.rows[0].n,
+  });
 }
 
 /* ---------------------------- main handler ---------------------------- */

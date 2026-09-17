@@ -135,7 +135,8 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function imgUrl(id) { return '/api?resource=gallery_image&id=' + encodeURIComponent(id); }
+        function thumbUrl(id) { return '/api?resource=gallery_image&thumb=1&id=' + encodeURIComponent(id); }
+        function fullUrl(id) { return '/api?resource=gallery_image&id=' + encodeURIComponent(id); }
 
         function showFolders() {
             imagesView.hidden = true;
@@ -146,9 +147,10 @@
         function renderPage() {
             var start = page * PAGE_SIZE;
             var slice = images.slice(start, start + PAGE_SIZE);
+            // Thumbnails load fast; the lightbox swaps in the full image on click.
             grid.innerHTML = slice.map(function (img) {
                 return '<figure>' +
-                    '<img src="' + imgUrl(img.id) + '" alt="' + esc(img.title) + '" loading="lazy">' +
+                    '<img src="' + thumbUrl(img.id) + '" alt="' + esc(img.title) + '" loading="lazy" decoding="async">' +
                     '<figcaption><strong>' + esc(img.title) + '</strong>' +
                     (img.caption ? '<span>' + esc(img.caption) + '</span>' : '') +
                     '</figcaption></figure>';
@@ -169,15 +171,34 @@
             window.scrollTo(0, 0);
         }
 
-        prevBtn.addEventListener('click', function () { if (page > 0) { page--; renderPage(); } });
-        nextBtn.addEventListener('click', function () { page++; renderPage(); });
+        prevBtn.addEventListener('click', function () { if (page > 0) { page--; renderPage(); window.scrollTo(0, 0); } });
+        nextBtn.addEventListener('click', function () { page++; renderPage(); window.scrollTo(0, 0); });
 
-        fetch('../api?resource=gallery_images', { credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (result) {
-                var items = (result && result.data) || [];
-                var folders = (result && result.folders) || {};
+        // Load ALL metadata pages (metadata is tiny — ~100 bytes per photo,
+        // so even 10,000 photos is ~1MB total). Thumbnails load lazily per page.
+        function fetchAllMetadata() {
+            var all = [];
+            function next(offset) {
+                return fetch('../api?resource=gallery_images&limit=200&offset=' + offset, { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (result) {
+                        all = all.concat(result.data || []);
+                        if (result.hasMore && all.length < 10000) return next(offset + 200);
+                        return all;
+                    });
+            }
+            return next(0);
+        }
+
+        fetchAllMetadata()
+            .then(function (items) {
+                var folders = {};
+                items.forEach(function (img) {
+                    var f = img.folder || 'General';
+                    folders[f] = (folders[f] || 0) + 1;
+                });
                 var names = Object.keys(folders).sort();
+                window.__portfolioItems = items; // used by folder clicks
                 if (!items.length) {
                     foldersBox.innerHTML = '<p class="portfolio-empty">No photos published yet — check back soon.</p>';
                     return;
@@ -192,7 +213,7 @@
                 foldersBox.querySelectorAll('.folder-card').forEach(function (card) {
                     card.addEventListener('click', function () {
                         var name = card.getAttribute('data-folder');
-                        images = items.filter(function (img) { return (img.folder || 'General') === name; });
+                        images = (window.__portfolioItems || []).filter(function (img) { return (img.folder || 'General') === name; });
                         openFolder(name);
                     });
                 });

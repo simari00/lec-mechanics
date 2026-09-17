@@ -221,11 +221,11 @@
                     return;
                 }
                 target.innerHTML = items.map(function (img) {
-                    // Images are streamed by the API from the database.
-                    var src = '../api?resource=gallery_image&id=' + encodeURIComponent(img.id);
+                    // Small thumbnails stream from the database; full size opens in the lightbox.
+                    var src = '../api?resource=gallery_image&thumb=1&id=' + encodeURIComponent(img.id);
                     var caption = img.caption ? esc(img.caption) : '';
                     return '<figure>' +
-                        '<img src="' + src + '" alt="' + esc(img.title) + '" loading="lazy">' +
+                        '<img src="' + src + '" alt="' + esc(img.title) + '" loading="lazy" decoding="async">' +
                         '<figcaption><strong>' + esc(img.title) + '</strong>' +
                         (caption ? '<span>' + caption + '</span>' : '') +
                         '</figcaption></figure>';
@@ -447,7 +447,9 @@
             currentIndex = (index + currentList.length) % currentList.length;
             var item = currentList[currentIndex];
             var imgEl = overlay.querySelector('#lec-lb-img');
-            imgEl.src = item.src;
+            // Prefer the upgraded full-size URL when available.
+            var fullSrcs = overlay.__fullSrcs;
+            imgEl.src = (fullSrcs && fullSrcs[currentIndex]) || item.src;
             imgEl.alt = item.alt;
             if (imgEl.complete) {
                 animateIn(imgEl);
@@ -582,7 +584,21 @@
             var grid = img.closest('.portfolio-grid, #admin-gallery');
             if (!grid) return;
             event.preventDefault();
-            open(img, Array.prototype.slice.call(grid.querySelectorAll('img')));
+            // Upgrade thumbnail URLs to full-size for the lightbox.
+            var group = Array.prototype.slice.call(grid.querySelectorAll('img')).map(function (el) {
+                var copy = { src: el.src, alt: el.alt };
+                if (/[?&]thumb=1/.test(el.src)) {
+                    copy.src = el.src.replace('thumb=1&', '').replace('&thumb=1', '').replace('?thumb=1', '');
+                }
+                return { el: el, data: copy };
+            });
+            var idx = group.findIndex(function (g) { return g.el === img; });
+            open(img, group.map(function (g, i) {
+                // keep DOM order mapping for show(); the lightbox reads .src later
+                return g.data;
+            }));
+            // store upgraded srcs for navigation
+            overlay.__fullSrcs = group.map(function (g) { return g.data.src; });
         });
     })();
 

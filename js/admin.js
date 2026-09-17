@@ -2225,7 +2225,9 @@
             api('gallery_images').then(function (result) {
                 var items = result.data || [];
                 if ($('gallery-count')) {
-                    $('gallery-count').textContent = items.length + ' image(s) published';
+                    var total = result.total !== undefined ? result.total : items.length;
+                    $('gallery-count').textContent = total + ' image(s) published' +
+                        (result.hasMore ? ' (showing latest ' + items.length + ')' : '');
                 }
 
                 // Folder suggestions for the upload form.
@@ -2243,7 +2245,7 @@
                 }
                 grid.innerHTML = items.map(function (img) {
                     return '<figure class="gallery-admin-card" data-id="' + img.id + '">' +
-                        '<img src="' + imageUrl(img.id) + '" alt="' + esc(img.title) + '">' +
+                        '<img src="/api?resource=gallery_image&thumb=1&id=' + encodeURIComponent(img.id) + '" alt="' + esc(img.title) + '" loading="lazy" decoding="async">' +
                         '<figcaption>' +
                         '<strong>' + esc(img.title) + '</strong>' +
                         '<span>📁 ' + esc(img.folder || 'General') + '</span>' +
@@ -2268,32 +2270,60 @@
                 toast('Choose at least one image first.', true);
                 return;
             }
-            // Serverless API has no multipart handling — send base64 data URLs.
-            var toDataUrl = function (file) {
-                return new Promise(function (resolve) {
-                    var reader = new FileReader();
-                    reader.onload = function () { resolve(reader.result); };
-                    reader.readAsDataURL(file);
-                });
-            };
 
             var btn = $('gallery-upload-btn');
             btn.disabled = true;
-            btn.textContent = 'Uploading…';
+            btn.textContent = 'Preparing…';
 
-            var jobs = [];
-            for (var i = 0; i < files.length; i++) jobs.push(toDataUrl(files[i]));
             // keep the chosen folder after reset() below
             var chosenFolder = $('gallery-folder').value;
 
-            Promise.all(jobs).then(function (dataUrls) {
+            // Resize each file in the browser before upload: full version capped
+            // at 1600px (~250-400KB as JPEG) plus a 400px thumbnail (~30-60KB).
+            // This keeps uploads fast and the website light even with phone photos.
+            var MAX_FULL = 1600, MAX_THUMB = 400;
+            function processFile(file) {
+                return new Promise(function (resolve) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var img = new Image();
+                        img.onload = function () {
+                            function drawTo(maxSide, quality) {
+                                var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                                var canvas = document.createElement('canvas');
+                                canvas.width = Math.max(Math.round(img.width * scale), 1);
+                                canvas.height = Math.max(Math.round(img.height * scale), 1);
+                                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                                return canvas.toDataURL('image/jpeg', quality);
+                            }
+                            resolve({
+                                full: drawTo(MAX_FULL, 0.82),
+                                thumb: drawTo(MAX_THUMB, 0.7)
+                            });
+                        };
+                        img.onerror = function () {
+                            // Not a decodable image — send the original file as-is.
+                            resolve({ full: reader.result, thumb: null });
+                        };
+                        img.src = reader.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            var jobs = [];
+            for (var i = 0; i < files.length; i++) jobs.push(processFile(files[i]));
+
+            Promise.all(jobs).then(function (processed) {
+                btn.textContent = 'Uploading…';
                 return fetch(new URL(API_URL, window.location.href).toString() + '?resource=gallery_images', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        images: dataUrls,
-                        folder: $('gallery-folder').value.trim() || 'General',
+                        images: processed.map(function (p) { return p.full; }),
+                        thumbs: processed.map(function (p) { return p.thumb; }),
+                        folder: chosenFolder,
                         title: $('gallery-title').value.trim(),
                         caption: $('gallery-caption').value.trim()
                     })

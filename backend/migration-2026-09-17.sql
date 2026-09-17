@@ -51,3 +51,8 @@ ALTER TABLE service_requests DROP CONSTRAINT IF EXISTS service_requests_status_c
 ALTER TABLE service_requests ADD CONSTRAINT service_requests_status_check
     CHECK (status IN ('New', 'Contacted', 'Approved', 'Scheduled', 'Declined',
                       'Completed', 'Closed', 'Car Fixed', 'Not Done'));
+
+-- ---------- 5. Gallery thumbnails (performance) ----------
+-- Small preview versions stored alongside the full image so gallery
+-- listings stay lightweight even with thousands of photos.
+ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS thumb_data TEXT NOT NULL DEFAULT '';
