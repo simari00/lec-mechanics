@@ -135,6 +135,76 @@ async function logActivity(client, action, resource, recordId, summary, user) {
   }
 }
 
+/* ---------------------------- new-request notifications ---------------------------- */
+
+/**
+ * Notify the admin on WhatsApp (CallMeBot) and/or email (Resend) when a new
+ * public request arrives. Each channel is optional — it only fires when its
+ * env vars are configured. Failures are logged but never break the request.
+ */
+async function notifyNewRequest(request) {
+  const isApprenticeship = request.request_type === 'Apprenticeship';
+  const kind = isApprenticeship ? '🎓 APPRENTICESHIP APPLICATION' : '🔧 NEW SERVICE REQUEST';
+  const lines = [
+    kind,
+    '',
+    'Name: ' + (request.full_name || '—'),
+    'Phone: ' + (request.phone || '—'),
+  ];
+  if (isApprenticeship) {
+    lines.push('Age: ' + (request.age || '—'));
+    lines.push('Technical subjects: ' + (request.technical_subjects || '—'));
+    lines.push('Driver\'s licence: ' + (request.drivers_licence || 'None'));
+  } else {
+    lines.push('Service: ' + (request.service_name || request.request_type || '—'));
+    lines.push('Vehicle: ' + (request.registration_number || '—'));
+  }
+  lines.push('Message: ' + String(request.message || '').slice(0, 160));
+  lines.push('', 'Tracking code: ' + (request.tracking_code || '—'));
+  lines.push('Open admin: https://lec-mechanics.vercel.app/admin/service-requests');
+  const text = lines.join('\n');
+
+  const jobs = [];
+
+  // --- WhatsApp via CallMeBot ---
+  const waPhone = process.env.WHATSAPP_NOTIFY_PHONE;
+  const waKey = process.env.WHATSAPP_NOTIFY_KEY;
+  if (waPhone && waKey) {
+    jobs.push(
+      fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(waPhone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(waKey)}`, {
+        method: 'GET',
+      }).then((r) => {
+        if (!r.ok) console.error('WhatsApp notify failed:', r.status);
+      }).catch((e) => console.error('WhatsApp notify error:', e.message))
+    );
+  }
+
+  // --- Email via Resend ---
+  const resendKey = process.env.RESEND_API_KEY;
+  const notifyEmail = process.env.NOTIFY_EMAIL;
+  if (resendKey && notifyEmail) {
+    jobs.push(
+      fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + resendKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'LEC Mechanics <onboarding@resend.dev>',
+          to: [notifyEmail],
+          subject: kind + ' — ' + (request.full_name || '') + ' (' + (request.tracking_code || '') + ')',
+          text,
+        }),
+      }).then(async (r) => {
+        if (!r.ok) console.error('Email notify failed:', r.status, await r.text().catch(() => ''));
+      }).catch((e) => console.error('Email notify error:', e.message))
+    );
+  }
+
+  if (jobs.length) await Promise.allSettled(jobs);
+}
+
 function describeRecord(body) {
   const parts = [
     body.job_number || body.invoice_number,
@@ -664,6 +734,10 @@ module.exports = async (req, res) => {
           Object.values(data));
         const newId = insert.rows[0].id;
         await logActivity(client, 'create', resource, newId, describeRecord(data), user);
+        // Notify the admin about new public requests (WhatsApp/email if configured).
+        if (isPublicRequest) {
+          await notifyNewRequest({ ...data, id: newId });
+        }
         const response = { success: true, id: newId };
         if (data.tracking_code) response.tracking_code = data.tracking_code;
         return json(res, response, 201);
