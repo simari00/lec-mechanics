@@ -946,7 +946,9 @@
         var current = select.value;
         select.innerHTML = '<option value="">' + placeholder + '</option>' +
             rows.map(function (row) {
-                return '<option value="' + row.id + '">' + esc(labelFn(row)) + '</option>';
+                // labelFn is called with the row's id (customerName/vehicleLabel/
+                // mechanicName all resolve names from the cache by id).
+                return '<option value="' + row.id + '">' + esc(labelFn(row.id)) + '</option>';
             }).join('');
         if (current) select.value = current;
     }
