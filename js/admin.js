@@ -1852,6 +1852,31 @@
                     '<div><dt>Type</dt><dd>' + esc(record.request_type) + '</dd></div>' +
                     '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
                 '</dl>';
+        } else if ((record.request_type || '') === 'Apprenticeship') {
+            // Mirror the customer's apprenticeship view (2 steps, not the service flow).
+            var appSteps = [
+                { key: 'New',      label: 'Application Received',      note: 'The application is in the system and waiting for review.' },
+                { key: 'Approved', label: 'Application Approved ✅', note: 'Congratulations! Approved — the team will call the applicant on the number provided.' }
+            ];
+            var appIndex = (status === 'Approved' || status === 'Scheduled') ? 1 : 0;
+            var appStepsHtml = appSteps.map(function (step, index) {
+                var state = index < appIndex ? 'done' : (index === appIndex ? 'current' : 'todo');
+                return '<li class="track-step ' + state + '">' +
+                    '<span class="track-step-dot"></span>' +
+                    '<div><strong>' + esc(step.label) + '</strong>' +
+                    (state === 'current' ? '<p>' + esc(step.note) + '</p>' : '') +
+                    '</div></li>';
+            }).join('');
+            body =
+                '<span class="track-status-pill">' + esc(status === 'Scheduled' ? 'Approved' : status) + '</span>' +
+                '<h3>' + esc(appSteps[appIndex].label) + '</h3>' +
+                '<p>' + esc(appSteps[appIndex].note) + '</p>' +
+                '<ol class="track-steps">' + appStepsHtml + '</ol>' +
+                '<dl class="track-details">' +
+                    '<div><dt>Code</dt><dd>' + esc(code) + '</dd></div>' +
+                    '<div><dt>Applicant</dt><dd>' + esc(record.full_name) + '</dd></div>' +
+                    '<div><dt>Submitted</dt><dd>' + fmtDate(record.created_at) + '</dd></div>' +
+                '</dl>';
         } else {
             var stepsHtml = TRACK_STEPS.map(function (step, index) {
                 var state = index < current ? 'done' : (index === current ? 'current' : 'todo');
