@@ -3952,3 +3952,27 @@ html[data-theme="dark"] .sidebar-menu a {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* --- dropdown options: always readable (fixes blank options on Windows Chrome) --- */
+select option {
+    background: #ffffff;
+    color: #111111;
+}
+
+html[data-theme="dark"] select option {
+    background: #242427;
+    color: #f2f2f0;
+}
+
+/* explicit control text colors so options never inherit white */
+.form-group select,
+.admin-form-panel .form-group select {
+    color: #111111;
+    background-color: #fafafa;
+}
+
+html[data-theme="dark"] .form-group select,
+html[data-theme="dark"] .admin-form-panel .form-group select {
+    color: #f2f2f0;
+    background-color: #242427;
+}
