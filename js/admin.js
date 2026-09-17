@@ -215,6 +215,7 @@
 
     function showLogin(userCount) {
         if (document.getElementById('lec-login-overlay')) return;
+        var setupDone = userCount !== undefined && userCount > 0;
 
         var overlay = document.createElement('div');
         overlay.id = 'lec-login-overlay';
@@ -267,7 +268,7 @@
             '</form>' +
             '<button type="button" id="lec-setup-toggle" ' +
             'style="display:block;margin:14px auto 0;background:none;border:0;color:#555;font-size:12px;' +
-            'text-decoration:underline;cursor:pointer;">First time here? Create the admin account</button>' +
+            'text-decoration:underline;cursor:pointer;">' + (setupDone ? 'Request an admin account (master approval needed)' : 'First time here? Create the admin account') + '</button>' +
             '<button type="button" id="lec-forgot-toggle" ' +
             'style="display:block;margin:8px auto 0;background:none;border:0;color:#555;font-size:12px;' +
             'text-decoration:underline;cursor:pointer;">Forgot password?</button>' +
@@ -316,12 +317,15 @@
         setupToggle.addEventListener('click', function () {
             setupMode = !setupMode;
             setupFields.hidden = !setupMode;
-            submitBtn.textContent = setupMode ? 'Create Admin Account' : 'Sign In';
+            submitBtn.textContent = setupMode
+                ? (setupDone ? 'Submit Account Request' : 'Create Admin Account')
+                : 'Sign In';
             setupToggle.textContent = setupMode
                 ? 'Already have an account? Sign in'
-                : 'First time here? Create the admin account';
+                : (setupDone ? 'Request an admin account (master approval needed)' : 'First time here? Create the admin account');
             forgotForm.hidden = true;
             forgotToggle.hidden = setupMode;
+            errorBox.textContent = '';
         });
 
         forgotToggle.addEventListener('click', function () {
@@ -411,20 +415,30 @@
                     submitBtn.disabled = false;
                     return;
                 }
-                request = api('auth', {
-                    method: 'POST',
-                    action: 'setup',
-                    body: {
-                        full_name: overlay.querySelector('#lec-setup-name').value.trim(),
-                        email: email,
-                        password: password,
-                        confirm_password: confirmValue,
-                        security_question: overlay.querySelector('#lec-setup-question').value,
-                        security_answer: overlay.querySelector('#lec-setup-answer').value
-                    }
-                }).then(function () {
-                    return api('auth', { method: 'POST', action: 'login', body: { email: email, password: password } });
-                });
+                var requestBody = {
+                    full_name: overlay.querySelector('#lec-setup-name').value.trim(),
+                    email: email,
+                    password: password,
+                    confirm_password: confirmValue,
+                    security_question: overlay.querySelector('#lec-setup-question').value,
+                    security_answer: overlay.querySelector('#lec-setup-answer').value
+                };
+                if (setupDone) {
+                    // Later accounts: public request that the master must approve.
+                    request = api('auth', { method: 'POST', action: 'request-admin', body: requestBody })
+                        .then(function (result) {
+                            errorBox.style.color = '#1e8e3e';
+                            errorBox.textContent = result.message || 'Request received! You can sign in once the master admin approves it.';
+                            setupToggle.click(); // back to sign-in view
+                            return null; // do not auto-login
+                        });
+                } else {
+                    // Very first account: full setup + immediate sign-in.
+                    request = api('auth', { method: 'POST', action: 'setup', body: requestBody })
+                        .then(function () {
+                            return api('auth', { method: 'POST', action: 'login', body: { email: email, password: password } });
+                        });
+                }
             } else {
                 request = api('auth', { method: 'POST', action: 'login', body: { email: email, password: password } });
             }
@@ -434,6 +448,7 @@
                     clearInterval(lockoutTimer);
                     lockoutTimer = null;
                 }
+                if (!result) return; // account request submitted — success message already shown
                 if (result.csrf_token) setCsrfToken(result.csrf_token);
                 overlay.remove();
                 if (markAdminUnlocked) markAdminUnlocked(); // explicit login unlocks the panel
@@ -601,6 +616,7 @@
                             pendingBox.innerHTML =
                                 '<div style="border:2px solid #e67e22;border-radius:10px;padding:12px;background:#fff8ef;">' +
                                 '<h3 style="margin:0 0 8px;font-size:14px;color:#b9770e;">⏳ Pending approvals (' + pending.length + ')</h3>' +
+                                '<p style="margin:0 0 10px;font-size:12px;color:#777;">These people requested accounts from the admin sign-in page. Approving lets them sign in with the password they chose.</p>' +
                                 pending.map(function (row) {
                                     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0e0c8;font-size:13px;">' +
                                         '<div><strong>' + esc(row.full_name) + '</strong>' +

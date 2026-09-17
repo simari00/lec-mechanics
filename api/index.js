@@ -442,12 +442,33 @@ module.exports = async (req, res) => {
         if (count.rows[0].n >= MAX_ADMINS) return fail(res, `The maximum of ${MAX_ADMINS} approved admin accounts already exists.`, 409);
         const dupe = await db().query('SELECT 1 FROM users WHERE email = $1', [body.email.toLowerCase().trim()]);
         if (dupe.rows.length) return fail(res, 'An account with this email already exists.', 409);
+        // The master created this account deliberately — it is active immediately.
+        await db().query(
+          'INSERT INTO users (full_name, email, password_hash, role, security_question, security_answer_hash, approval_status, approved_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+          [body.full_name.trim(), body.email.toLowerCase().trim(), await bcrypt.hash(body.password, 10), 'admin',
+           body.security_question, await bcrypt.hash(normalizeAnswer(body.security_answer), 10), 'approved', user.id]);
+        await logActivity(db(), 'create', 'users', null, `Admin account created by master: ${body.email}`, user);
+        return json(res, { success: true, message: 'Admin account created and active. Share the credentials with the new admin securely.' }, 201);
+      }
+
+      // Public self-registration: anyone may REQUEST an admin account, but it
+      // stays locked until the master admin approves it. Hard limits prevent spam.
+      if (action === 'request-admin' && method === 'POST') {
+        const passwordError = passwordRule(body.password);
+        if (!body.email || passwordError || !body.full_name) return fail(res, passwordError || 'full_name and a valid email are required.', 422);
+        if (body.confirm_password !== body.password) return fail(res, 'Password confirmation does not match the password.', 422);
+        if (!body.security_question || !body.security_answer) return fail(res, 'A security question and answer are required.', 422);
+        const approvedCount = await db().query("SELECT COUNT(*)::int AS n FROM users WHERE approval_status = 'approved'");
+        if (approvedCount.rows[0].n >= MAX_ADMINS) return fail(res, `The maximum of ${MAX_ADMINS} approved admin accounts already exists. No new accounts are being accepted.`, 409);
+        const totalUsers = await db().query('SELECT COUNT(*)::int AS n FROM users');
+        if (totalUsers.rows[0].n >= MAX_ADMINS + 5) return fail(res, 'Too many account requests are waiting for review. Please try again later.', 429);
+        const dupe = await db().query('SELECT 1 FROM users WHERE email = $1', [body.email.toLowerCase().trim()]);
+        if (dupe.rows.length) return fail(res, 'An account with this email already exists.', 409);
         await db().query(
           'INSERT INTO users (full_name, email, password_hash, role, security_question, security_answer_hash, approval_status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
           [body.full_name.trim(), body.email.toLowerCase().trim(), await bcrypt.hash(body.password, 10), 'admin',
            body.security_question, await bcrypt.hash(normalizeAnswer(body.security_answer), 10), 'pending']);
-        await logActivity(db(), 'create', 'users', null, `Admin account request: ${body.email}`, user);
-        return json(res, { success: true, message: 'Admin account created. It stays locked until the master admin approves it.' }, 201);
+        return json(res, { success: true, message: 'Request received! The master admin will review it. You can sign in as soon as it is approved.' }, 201);
       }
 
       // Master admin: list pending admin-account requests
