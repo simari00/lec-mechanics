@@ -430,12 +430,30 @@
             document.removeEventListener('keydown', onKey);
         }
 
+        // Zoom-in loading animation: photo scales from 0.86 to 1 with a fade.
+        function animateIn(img) {
+            img.style.transition = 'none';
+            img.style.opacity = '0';
+            img.style.transform = 'scale(0.86)';
+            // force a reflow so the transition below always plays
+            void img.offsetWidth;
+            img.style.transition = 'opacity .28s ease, transform .28s cubic-bezier(.2,.8,.3,1.1)';
+            img.style.opacity = '1';
+            img.style.transform = 'scale(1)';
+        }
+
         function show(index) {
             if (!overlay || !currentList.length) return;
             currentIndex = (index + currentList.length) % currentList.length;
             var item = currentList[currentIndex];
-            overlay.querySelector('#lec-lb-img').src = item.src;
-            overlay.querySelector('#lec-lb-img').alt = item.alt;
+            var imgEl = overlay.querySelector('#lec-lb-img');
+            imgEl.src = item.src;
+            imgEl.alt = item.alt;
+            if (imgEl.complete) {
+                animateIn(imgEl);
+            } else {
+                imgEl.onload = function () { animateIn(imgEl); };
+            }
             overlay.querySelector('#lec-lb-caption').innerHTML =
                 '<strong>' + esc(item.title) + '</strong>' +
                 (item.caption ? '<span>' + esc(item.caption) + '</span>' : '');
@@ -501,6 +519,51 @@
                 if (event.target === overlay) close();
             });
             document.addEventListener('keydown', onKey);
+
+            // Mobile swipe: drag or swipe left/right to change photo, swipe down to close.
+            var touchStartX = 0, touchStartY = 0, touchDeltaX = 0, touchDeltaY = 0, swiping = false;
+            var imgBox = overlay.querySelector('#lec-lb-img');
+
+            overlay.addEventListener('touchstart', function (event) {
+                if (event.touches.length !== 1) return;
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+                touchDeltaX = 0;
+                touchDeltaY = 0;
+                swiping = true;
+                imgBox.style.transition = 'none';
+            }, { passive: true });
+
+            overlay.addEventListener('touchmove', function (event) {
+                if (!swiping || event.touches.length !== 1) return;
+                touchDeltaX = event.touches[0].clientX - touchStartX;
+                touchDeltaY = event.touches[0].clientY - touchStartY;
+                // Horizontal drag slides the photo; vertical drag lifts it toward close.
+                if (Math.abs(touchDeltaX) > Math.abs(touchDeltaY)) {
+                    imgBox.style.transform = 'translateX(' + (touchDeltaX * 0.6) + 'px)';
+                    imgBox.style.opacity = String(Math.max(1 - Math.abs(touchDeltaX) / 500, 0.4));
+                } else if (touchDeltaY > 0) {
+                    imgBox.style.transform = 'translateY(' + (touchDeltaY * 0.5) + 'px)';
+                    imgBox.style.opacity = String(Math.max(1 - touchDeltaY / 400, 0.4));
+                }
+            }, { passive: true });
+
+            overlay.addEventListener('touchend', function () {
+                if (!swiping) return;
+                swiping = false;
+                imgBox.style.transition = 'transform .25s ease, opacity .25s ease';
+                var SWIPE = 60; // minimum px before a swipe registers
+                if (Math.abs(touchDeltaX) > Math.abs(touchDeltaY) && Math.abs(touchDeltaX) > SWIPE) {
+                    imgBox.style.transform = '';
+                    imgBox.style.opacity = '';
+                    show(currentIndex + (touchDeltaX < 0 ? 1 : -1)); // animateIn plays via show()
+                } else if (touchDeltaY > SWIPE && Math.abs(touchDeltaX) < SWIPE) {
+                    close(); // swipe down dismisses
+                } else {
+                    imgBox.style.transform = 'scale(1)';
+                    imgBox.style.opacity = '1';
+                }
+            });
 
             // restore scrolling when closed
             var observer = new MutationObserver(function () {
