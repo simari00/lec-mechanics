@@ -304,10 +304,8 @@
         wirePasswordEyes(overlay);
         wirePasswordMatch(overlay.querySelector('#lec-login-password'), overlay.querySelector('#lec-setup-confirm'), overlay.querySelector('#lec-setup-match-hint'));
 
-        // The one-time setup link only makes sense before any account exists.
-        if (userCount !== undefined && userCount > 0) {
-            setupToggle.style.display = 'none';
-        }
+        // The link stays visible: before setup it creates the first admin;
+        // afterwards it becomes the account-request flow (master approves).
 
         var forgotForm = overlay.querySelector('#lec-forgot-form');
         var forgotToggle = overlay.querySelector('#lec-forgot-toggle');
