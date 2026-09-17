@@ -168,10 +168,34 @@ async function notifyNewRequest(request) {
 
   const jobs = [];
 
-  // --- WhatsApp via CallMeBot ---
-  const waPhone = process.env.WHATSAPP_NOTIFY_PHONE;
-  const waKey = process.env.WHATSAPP_NOTIFY_KEY;
-  if (waPhone && waKey) {
+  // --- WhatsApp via Twilio (preferred, official) ---
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioFrom = process.env.TWILIO_WHATSAPP_FROM; // e.g. +14155238886 (sandbox)
+  const waPhone = process.env.WHATSAPP_NOTIFY_PHONE;   // e.g. +263776496150
+  const waKey = process.env.WHATSAPP_NOTIFY_KEY;       // CallMeBot fallback
+
+  if (twilioSid && twilioToken && twilioFrom && waPhone) {
+    jobs.push(
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(twilioSid + ':' + twilioToken).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          From: 'whatsapp:' + twilioFrom,
+          To: 'whatsapp:' + waPhone,
+          Body: text,
+        }),
+      }).then(async (r) => {
+        if (!r.ok) console.error('Twilio WhatsApp notify failed:', r.status, await r.text().catch(() => ''));
+      }).catch((e) => console.error('Twilio WhatsApp notify error:', e.message))
+    );
+  }
+
+  // --- WhatsApp via CallMeBot (fallback) ---
+  else if (waPhone && waKey) {
     jobs.push(
       fetch(`https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(waPhone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(waKey)}`, {
         method: 'GET',
