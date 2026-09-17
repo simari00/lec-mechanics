@@ -2,23 +2,103 @@
 (function () {
     'use strict';
 
-    /* ---------------- DARK / LIGHT THEME TOGGLE ---------------- */
+    /* ---------------- COOKIE CONSENT (real consent, real cookie) ----------------
+       Categories:
+       - necessary : admin session cookie (server-side, always on, cannot be disabled)
+       - functional: theme preference (lecFunctional) — OFF until the visitor allows it
+       Consent itself is stored in the cookie 'lecCookieConsent' (1 year).
+       A matching localStorage mirror ('lecCookieConsent') guards browsers that
+       block cookies; the cookie is the source of truth. */
 
+    var CONSENT_COOKIE = 'lecCookieConsent';
+    var CONSENT_MAX_AGE = 60 * 60 * 24 * 365; // 1 year, in seconds
+
+    function readConsentCookie() {
+        var parts = document.cookie.split(/;\s*/);
+        for (var i = 0; i < parts.length; i++) {
+            var eq = parts[i].indexOf('=');
+            if (eq < 0) continue;
+            if (parts[i].slice(0, eq) === CONSENT_COOKIE) {
+                try { return JSON.parse(decodeURIComponent(parts[i].slice(eq + 1))); }
+                catch (e) { return null; }
+            }
+        }
+        return null;
+    }
+
+    function writeConsentCookie(value) {
+        var encoded = encodeURIComponent(JSON.stringify(value));
+        document.cookie = CONSENT_COOKIE + '=' + encoded +
+            '; max-age=' + CONSENT_MAX_AGE + '; path=/; SameSite=Lax';
+        try { localStorage.setItem(CONSENT_COOKIE, JSON.stringify(value)); } catch (e) { /* ignore */ }
+    }
+
+    function clearConsent() {
+        document.cookie = CONSENT_COOKIE + '=; max-age=0; path=/';
+        try { localStorage.removeItem(CONSENT_COOKIE); } catch (e) { /* ignore */ }
+        // Withdrawing consent also wipes everything the functional category stored.
+        try { localStorage.removeItem('lecTheme'); } catch (e) { /* ignore */ }
+    }
+
+    var consent = readConsentCookie();
+    // Browsers that block cookies: fall back to the localStorage mirror.
+    if (!consent) {
+        try {
+            var mirrored = localStorage.getItem(CONSENT_COOKIE);
+            if (mirrored) consent = JSON.parse(mirrored);
+        } catch (e) { /* ignore */ }
+    }
+    if (!consent || typeof consent !== 'object') consent = null;
+
+    function functionalAllowed() {
+        return Boolean(consent && consent.functional);
+    }
+
+    // Fires whenever consent changes so other modules can react (e.g. save the theme).
+    var consentListeners = [];
+    function onConsentChange(fn) { consentListeners.push(fn); }
+    function emitConsentChange() {
+        consentListeners.forEach(function (fn) { try { fn(functionalAllowed()); } catch (e) { /* ignore */ } });
+    }
+
+    function applyDecision(decision) {
+        // decision: { functional: true|false }
+        consent = {
+            necessary: true,
+            functional: Boolean(decision.functional),
+            date: new Date().toISOString().slice(0, 10)
+        };
+        writeConsentCookie(consent);
+        removeBanner();
+        emitConsentChange();
+        if (!consent.functional) {
+            // Rejected functional storage: wipe anything it had saved.
+            try { localStorage.removeItem('lecTheme'); } catch (e) { /* ignore */ }
+        }
+    }
+
+    /* ---------------- DARK / LIGHT THEME TOGGLE (functional cookie category) ---------------- */
+
+    // Theme applies for THIS pageview regardless of consent (no storage), but it is
+    // only REMEMBERED across visits when functional cookies are allowed.
     (function buildThemeToggle() {
         var KEY = 'lecTheme';
 
-        // Apply saved preference immediately (before first paint if possible).
-        var saved = null;
-        try { saved = localStorage.getItem(KEY); } catch (e) { /* storage blocked */ }
-        var theme = saved === 'dark' || saved === 'light'
-            ? saved
+        function savedTheme() {
+            if (!functionalAllowed()) return null; // no consent → never read stored preference
+            try { return localStorage.getItem(KEY); } catch (e) { return null; }
+        }
+
+        var theme = savedTheme() === 'dark' || savedTheme() === 'light'
+            ? savedTheme()
             : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         document.documentElement.setAttribute('data-theme', theme);
 
-        // Ensure <head> exists even for late injection.
-        function apply(t) {
+        function apply(t, persist) {
             document.documentElement.setAttribute('data-theme', t);
-            try { localStorage.setItem(KEY, t); } catch (e) { /* ignore */ }
+            if (persist && functionalAllowed()) {
+                try { localStorage.setItem(KEY, t); } catch (e) { /* ignore */ }
+            }
             var btn = document.querySelector('.theme-toggle');
             if (btn) {
                 btn.textContent = t === 'dark' ? '☀️ Light' : '🌙 Dark';
@@ -31,7 +111,7 @@
         btn.className = 'theme-toggle';
         btn.addEventListener('click', function () {
             var current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            apply(current);
+            apply(current, true);
         });
 
         // Admin pages: fixed sidebar owns the left — place the toggle bottom-right.
@@ -39,7 +119,88 @@
             btn.classList.add('theme-toggle-right');
         }
         document.body.appendChild(btn);
-        apply(theme);
+        apply(theme, false);
+
+        // If the visitor grants functional cookies mid-session, remember their current theme.
+        onConsentChange(function (allowed) {
+            if (allowed) {
+                try { localStorage.setItem(KEY, document.documentElement.getAttribute('data-theme')); } catch (e) { /* ignore */ }
+            } else {
+                try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+            }
+        });
+    })();
+
+    /* ---------------- CONSENT BANNER (shown until a decision is made) ---------------- */
+
+    var bannerEl = null;
+
+    function removeBanner() {
+        if (bannerEl) { bannerEl.remove(); bannerEl = null; }
+    }
+
+    function buildBanner() {
+        if (document.getElementById('lec-consent-banner')) return;
+        var inPages = /(^|\/)pages\//.test(window.location.pathname);
+        var cookiesUrl = inPages ? 'cookies.html' : 'pages/cookies.html';
+
+        bannerEl = document.createElement('div');
+        bannerEl.id = 'lec-consent-banner';
+        bannerEl.setAttribute('role', 'dialog');
+        bannerEl.setAttribute('aria-label', 'Cookie consent');
+        bannerEl.setAttribute('aria-live', 'polite');
+        bannerEl.innerHTML =
+            '<div class="lec-consent-text">' +
+                '<strong>🍪 We use cookies</strong>' +
+                '<span>Necessary cookies keep the site working. Functional cookies remember your ' +
+                'preferences (like light/dark mode). No advertising or tracking cookies — ever. ' +
+                '<a href="' + cookiesUrl + '">Read our cookie policy</a>.</span>' +
+            '</div>' +
+            '<div class="lec-consent-actions">' +
+                '<button type="button" id="lec-consent-accept" class="lec-consent-accept">Accept all</button>' +
+                '<button type="button" id="lec-consent-reject" class="lec-consent-reject">Reject optional</button>' +
+                '<button type="button" id="lec-consent-custom" class="lec-consent-custom">Preferences</button>' +
+            '</div>' +
+            '<div class="lec-consent-prefs" id="lec-consent-prefs" hidden>' +
+                '<label><input type="checkbox" checked disabled> <span><strong>Strictly necessary</strong> — admin sign-in security. Always on.</span></label>' +
+                '<label><input type="checkbox" id="lec-consent-functional"> <span><strong>Functional</strong> — remembers your theme choice on this device.</span></label>' +
+                '<button type="button" id="lec-consent-save" class="lec-consent-accept">Save my choices</button>' +
+            '</div>';
+
+        document.body.appendChild(bannerEl);
+
+        bannerEl.querySelector('#lec-consent-accept').addEventListener('click', function () {
+            applyDecision({ functional: true });
+        });
+        bannerEl.querySelector('#lec-consent-reject').addEventListener('click', function () {
+            applyDecision({ functional: false });
+        });
+        bannerEl.querySelector('#lec-consent-custom').addEventListener('click', function () {
+            var prefs = bannerEl.querySelector('#lec-consent-prefs');
+            prefs.hidden = !prefs.hidden;
+            if (!prefs.hidden) {
+                bannerEl.querySelector('#lec-consent-functional').checked = functionalAllowed();
+                prefs.scrollIntoView({ block: 'nearest' });
+            }
+        });
+        bannerEl.querySelector('#lec-consent-save').addEventListener('click', function () {
+            applyDecision({ functional: bannerEl.querySelector('#lec-consent-functional').checked });
+        });
+    }
+
+    // Public hook so the Cookies Preferences page can reopen the banner at any time.
+    window.lecOpenCookiePreferences = function () {
+        if (document.body.classList.contains('admin-body')) return;
+        buildBanner();
+        var prefs = bannerEl.querySelector('#lec-consent-prefs');
+        prefs.hidden = false;
+        bannerEl.querySelector('#lec-consent-functional').checked = functionalAllowed();
+        bannerEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    };
+
+    (function initConsentBanner() {
+        if (document.body.classList.contains('admin-body')) return; // admin makes no tracking decisions
+        if (!consent) buildBanner(); // first visit / consent withdrawn → ask
     })();
 
     /* ---------------- HERO BACKGROUND SLIDESHOW (crossfade) ---------------- */

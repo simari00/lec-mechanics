@@ -24,6 +24,18 @@
         .legal-updated { font-size: 13px; opacity: .55; margin-bottom: 30px; }
         .cookie-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
         .cookie-table th, .cookie-table td { border: 1px solid rgba(128,128,128,.3); padding: 8px 10px; text-align: left; }
+        .consent-status { border: 1px solid rgba(128,128,128,.3); border-radius: 12px; padding: 18px 20px; margin: 18px 0 26px; }
+        .consent-status h2 { margin-top: 0 !important; }
+        .consent-status .status-line { font-size: 14px; margin: 6px 0; }
+        .consent-status .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .consent-status .badge.on { background: rgba(46,160,67,.18); color: #2ea043; }
+        .consent-status .badge.off { background: rgba(160,80,46,.18); color: #c25a2e; }
+        .consent-status .badge.unknown { background: rgba(128,128,128,.18); opacity: .8; }
+        .consent-status .consent-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .consent-status button { border: 0; border-radius: 8px; padding: 10px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+        .consent-status .btn-primary { background: #ff5a5f; color: #fff; }
+        .consent-status .btn-secondary { background: rgba(128,128,128,.18); }
+        .consent-status .btn-danger { background: transparent; color: #c25a2e; text-decoration: underline; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -47,12 +59,29 @@
         <h1>Cookies Preferences</h1>
         <p class="legal-updated">Last updated: 17 September 2026</p>
 
+        <div class="consent-status" id="consent-status-box">
+            <h2>Your current cookie choices</h2>
+            <p class="status-line">Strictly necessary cookies: <span class="badge on">Always on</span></p>
+            <p class="status-line">Functional cookies (remember your theme): <span class="badge unknown" id="functional-badge">Checking…</span></p>
+            <p class="status-line" id="consent-date-line" style="opacity:.6;font-size:12.5px;"></p>
+            <div class="consent-actions">
+                <button type="button" class="btn-primary" id="btn-allow-functional">Allow functional cookies</button>
+                <button type="button" class="btn-secondary" id="btn-reject-functional">Keep only necessary</button>
+                <button type="button" class="btn-danger" id="btn-open-prefs">Open the consent banner again</button>
+            </div>
+        </div>
+
         <h2>1. What are cookies?</h2>
         <p>Cookies are small pieces of data a website stores in your browser. They help websites remember your preferences and keep you signed in.</p>
 
         <h2>2. Cookies we use</h2>
         <table class="cookie-table">
             <tr><th>Cookie</th><th>Type</th><th>Purpose</th></tr>
+            <tr>
+                <td><code>lecCookieConsent</code></td>
+                <td>Strictly necessary</td>
+                <td>Stores YOUR cookie choice (accept / reject / custom) so we do not ask you on every visit. Lasts 1 year. You can change or erase it any time using the controls on this page.</td>
+            </tr>
             <tr>
                 <td><code>lec_session</code></td>
                 <td>Strictly necessary</td>
@@ -61,7 +90,7 @@
             <tr>
                 <td><code>lecTheme</code> (local storage)</td>
                 <td>Functional</td>
-                <td>Remembers whether you chose light or dark mode on the website.</td>
+                <td>Remembers whether you chose light or dark mode on the website. Only stored after you allow functional cookies — if you reject, your theme choice applies to the current visit only and is erased.</td>
             </tr>
         </table>
 
@@ -69,7 +98,9 @@
         <p>We do not use advertising cookies, analytics trackers or social-media pixels. Nothing on this site follows you around the internet.</p>
 
         <h2>4. Managing cookies</h2>
-        <p>You can clear or block cookies in your browser settings at any time (usually under Privacy &amp; Security). Blocking strictly necessary cookies will prevent administrators from signing in, but the public website will keep working normally. Your theme preference is stored locally and you can clear it any time via your browser's "clear site data" option.</p>
+        <p>On your first visit we show a cookie banner: <strong>Accept all</strong>, <strong>Reject optional</strong>, or <strong>Preferences</strong> to choose category by category. Your choice is a real cookie on your device and the site obeys it.</p>
+        <p>Changed your mind? Use the controls in <strong>"Your current cookie choices"</strong> at the top of this page — allow, reject, or reopen the banner. Withdrawing consent erases the functional data immediately and the banner returns on your next visit.</p>
+        <p>You can also clear or block cookies in your browser settings at any time (usually under Privacy &amp; Security). Blocking strictly necessary cookies will prevent administrators from signing in, but the public website will keep working normally.</p>
 
         <h2>5. Questions</h2>
         <p>Questions about cookies? Call <a href="tel:0771232171">0771 232 171</a>.</p>
@@ -92,5 +123,54 @@
     </footer>
 
     <script src="../js/script.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        function readConsent() {
+            var parts = document.cookie.split(/;\s*/);
+            for (var i = 0; i < parts.length; i++) {
+                var eq = parts[i].indexOf('=');
+                if (eq < 0) continue;
+                if (parts[i].slice(0, eq) === 'lecCookieConsent') {
+                    try { return JSON.parse(decodeURIComponent(parts[i].slice(eq + 1))); } catch (e) { return null; }
+                }
+            }
+            // Browsers that block cookies keep the mirror copy.
+            try { return JSON.parse(localStorage.getItem('lecCookieConsent') || 'null'); } catch (e) { return null; }
+        }
+
+        var badge = document.getElementById('functional-badge');
+        var dateLine = document.getElementById('consent-date-line');
+
+        function render() {
+            var c = readConsent();
+            if (!c) {
+                badge.textContent = 'No choice yet — banner will show';
+                badge.className = 'badge unknown';
+                dateLine.textContent = '';
+            } else {
+                badge.textContent = c.functional ? 'Allowed ✓' : 'Rejected ✗';
+                badge.className = 'badge ' + (c.functional ? 'on' : 'off');
+                dateLine.textContent = 'You set these preferences on ' + c.date + '. They apply to this device only.';
+            }
+        }
+
+        function decide(functional) {
+            var value = { necessary: true, functional: functional, date: new Date().toISOString().slice(0, 10) };
+            document.cookie = 'lecCookieConsent=' + encodeURIComponent(JSON.stringify(value)) + '; max-age=31536000; path=/; SameSite=Lax';
+            try { localStorage.setItem('lecCookieConsent', JSON.stringify(value)); } catch (e) {}
+            if (!functional) { try { localStorage.removeItem('lecTheme'); } catch (e) {} }
+            render();
+        }
+
+        document.getElementById('btn-allow-functional').addEventListener('click', function () { decide(true); });
+        document.getElementById('btn-reject-functional').addEventListener('click', function () { decide(false); });
+        document.getElementById('btn-open-prefs').addEventListener('click', function () {
+            if (window.lecOpenCookiePreferences) window.lecOpenCookiePreferences();
+        });
+
+        render();
+    })();
+    </script>
 </body>
 </html>

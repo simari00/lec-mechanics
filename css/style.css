@@ -3976,3 +3976,116 @@ html[data-theme="dark"] .admin-form-panel .form-group select {
     color: #f2f2f0;
     background-color: #242427;
 }
+
+/* ---------------- COOKIE CONSENT BANNER ---------------- */
+
+#lec-consent-banner {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 12000;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 18px 22px;
+    border-radius: 14px;
+    background: #101418;
+    color: #f5f5f2;
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    align-items: center;
+    justify-content: space-between;
+    animation: lec-consent-rise 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.05);
+}
+
+@keyframes lec-consent-rise {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+#lec-consent-banner .lec-consent-text strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 3px;
+}
+
+#lec-consent-banner .lec-consent-text span {
+    display: block;
+    font-size: 12.5px;
+    line-height: 1.55;
+    opacity: 0.82;
+}
+
+#lec-consent-banner .lec-consent-text a {
+    color: #ff5a5f;
+    text-decoration: underline;
+}
+
+#lec-consent-banner .lec-consent-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#lec-consent-banner button {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+#lec-consent-banner button:hover { filter: brightness(1.12); }
+#lec-consent-banner button:active { transform: scale(0.97); }
+
+#lec-consent-banner .lec-consent-accept {
+    background: #ff5a5f;
+    color: #ffffff;
+}
+
+#lec-consent-banner .lec-consent-reject {
+    background: rgba(255, 255, 255, 0.14);
+    color: #f5f5f2;
+}
+
+#lec-consent-banner .lec-consent-custom {
+    background: transparent;
+    color: rgba(245, 245, 242, 0.75);
+    text-decoration: underline;
+}
+
+#lec-consent-banner .lec-consent-prefs {
+    flex-basis: 100%;
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+#lec-consent-banner .lec-consent-prefs label {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#lec-consent-banner .lec-consent-prefs input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: #ff5a5f;
+}
+
+@media (max-width: 640px) {
+    #lec-consent-banner { left: 10px; right: 10px; bottom: 10px; padding: 14px 16px; }
+    #lec-consent-banner .lec-consent-actions { width: 100%; }
+    #lec-consent-banner .lec-consent-actions button { flex: 1; }
+}
+
+/* Theme toggle must never hide behind the banner */
+.theme-toggle { z-index: 11000; }
