@@ -619,6 +619,12 @@
                 '<h3 style="margin:0 0 8px;font-size:15px;">💾 Database backups</h3>' +
                 '<p style="margin:0 0 10px;color:#777;font-size:12px;">A snapshot of every table is saved automatically every night (last 30 kept). You can also snapshot right now or download any snapshot as a JSON file.</p>' +
                 '<button type="button" id="lec-sec-backup-now" style="padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">💾 Back up now</button>' +
+                '<div style="margin-top:14px;border:2px dashed #e67e22;border-radius:10px;padding:12px;background:#fff8ef;">' +
+                '<strong style="font-size:13px;">♻️ Restore data</strong>' +
+                '<p style="margin:4px 0 8px;color:#777;font-size:12px;">Upload a backup JSON file (or pick a stored snapshot below) to recover lost data. Restore is <strong>additive and safe</strong>: it only adds rows that are missing — nothing existing is overwritten or deleted. A preview always runs first.</p>' +
+                '<input type="file" id="lec-sec-restore-file" accept=".json,application/json" style="font-size:12px;">' +
+                '<div id="lec-sec-restore-preview" style="margin-top:10px;"></div>' +
+                '</div>' +
                 '<div id="lec-sec-backup-list" style="margin-top:12px;"><em style="color:#999;font-size:12px;">Loading snapshots…</em></div>' +
                 '</div>' : '') +
                 '</div>';
@@ -758,10 +764,19 @@
                             var downloadId = row.id;
                             return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f2f2f2;font-size:12.5px;">' +
                                 '<span><strong>' + esc(when) + '</strong> — ' + row.row_count + ' rows</span>' +
+                                '<span style="display:flex;gap:6px;">' +
+                                '<button type="button" class="lec-backup-restore" data-id="' + downloadId + '" ' +
+                                'style="padding:4px 10px;border:1px solid #e67e22;background:#fff8ef;color:#b9770e;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">♻️ Restore</button>' +
                                 '<button type="button" class="lec-backup-dl" data-id="' + downloadId + '" ' +
                                 'style="padding:4px 10px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">⬇ Download</button>' +
-                                '</div>';
+                                '</span></div>';
                         }).join('');
+
+                        backupBox.querySelectorAll('.lec-backup-restore').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                restoreFrom({ snapshot_id: Number(btn.getAttribute('data-id')) });
+                            });
+                        });
                         backupBox.querySelectorAll('.lec-backup-dl').forEach(function (btn) {
                             btn.addEventListener('click', function () {
                                 var id = btn.getAttribute('data-id');
@@ -791,6 +806,75 @@
                         loadBackups();
                     }).catch(function (e) { msg(e.message, true); })
                       .finally(function () { btn.disabled = false; btn.textContent = '💾 Back up now'; });
+                });
+
+                // ---- restore from uploaded file ----
+                var previewBox = overlay.querySelector('#lec-sec-restore-preview');
+                var pendingRestore = null; // { snapshot } awaiting confirmation
+
+                function formatReport(report) {
+                    var lines = ['<div style="border:1px solid #ddd;border-radius:8px;padding:10px;font-size:12.5px;background:#fff;">'];
+                    lines.push('<strong>' + (report.preview ? 'Preview' : 'Restore complete') + '</strong> — ' + report.total_restored + ' row(s) would ' + (report.preview ? 'be' : 'were') + ' added.');
+                    Object.keys(report.tables).forEach(function (t) {
+                        var r = report.tables[t];
+                        if (r.restored || r.skipped) {
+                            lines.push('<div style="margin-top:3px;">' + esc(t) + ': <strong style="color:' + (r.restored ? '#1e8e3e' : '#999') + ';">+' + r.restored + '</strong> restored, ' + r.skipped + ' skipped (already exist)</div>');
+                        }
+                    });
+                    lines.push('</div>');
+                    return lines.join('');
+                }
+
+                function restoreFrom(payload) {
+                    msg('Running restore preview…');
+                    api('backups', { method: 'POST', action: 'restore-preview', body: payload }).then(function (report) {
+                        msg('');
+                        pendingRestore = payload;
+                        previewBox.innerHTML = formatReport(report) +
+                            '<div style="margin-top:10px;display:flex;gap:8px;">' +
+                            '<button type="button" id="lec-sec-restore-confirm" style="padding:8px 14px;border:0;border-radius:8px;background:#1e8e3e;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;">♻️ Restore ' + report.total_restored + ' row(s) now</button>' +
+                            '<button type="button" id="lec-sec-restore-cancel" style="padding:8px 14px;border:1px solid #bbb;border-radius:8px;background:#fff;font-size:12.5px;cursor:pointer;">Cancel</button>' +
+                            '</div>';
+                        previewBox.querySelector('#lec-sec-restore-confirm').addEventListener('click', function () {
+                            if (!pendingRestore) return;
+                            msg('Restoring…');
+                            api('backups', { method: 'POST', action: 'restore', body: pendingRestore }).then(function (done) {
+                                pendingRestore = null;
+                                previewBox.innerHTML = '';
+                                msg('✅ Restore complete — ' + done.total_restored + ' row(s) recovered. Nothing existing was changed.');
+                                loadBackups();
+                            }).catch(function (e) { msg(e.message, true); });
+                        });
+                        previewBox.querySelector('#lec-sec-restore-cancel').addEventListener('click', function () {
+                            pendingRestore = null;
+                            previewBox.innerHTML = '';
+                            msg('Restore cancelled.');
+                        });
+                    }).catch(function (e) { msg(e.message, true); });
+                }
+
+                overlay.querySelector('#lec-sec-restore-file').addEventListener('change', function () {
+                    var file = this.files && this.files[0];
+                    if (!file) return;
+                    if (file.size > 30 * 1024 * 1024) {
+                        msg('That file is too large (max 30MB).', true);
+                        return;
+                    }
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        try {
+                            var snapshot = JSON.parse(reader.result);
+                            if (!snapshot || !snapshot.tables) {
+                                msg('That file is not a valid LEC backup file.', true);
+                                return;
+                            }
+                            restoreFrom({ snapshot: snapshot });
+                        } catch (e) {
+                            msg('Could not read the file as JSON: ' + e.message, true);
+                        }
+                    };
+                    reader.readAsText(file);
+                    this.value = ''; // allow re-selecting the same file
                 });
             }
 

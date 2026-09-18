@@ -483,6 +483,7 @@ module.exports = async (req, res) => {
       const user = await requireAuth(req, res); if (!user) return;
       if (user.role !== 'master') return fail(res, 'Only the master admin can manage backups.', 403);
       const backupPool = db();
+      const body = req.body || {};
 
       // List stored snapshots (metadata only — not the payloads).
       if (method === 'GET' && !id) {
@@ -499,7 +500,7 @@ module.exports = async (req, res) => {
       }
 
       // POST → take a snapshot right now (reuses the cron logic inline).
-      if (method === 'POST' && !id) {
+      if (method === 'POST' && !id && !action) {
         const BACKUP_TABLES = ['users','customers','vehicles','mechanics','spare_parts','job_cards','job_card_parts','invoices','payments','service_requests','gallery_images'];
         const snapshot = { version: 1, taken_at: new Date().toISOString(), tables: {} };
         let totalRows = 0;
@@ -532,6 +533,74 @@ module.exports = async (req, res) => {
       if (method === 'DELETE' && id) {
         await backupPool.query('DELETE FROM backups WHERE id = $1', [id]);
         return json(res, { success: true });
+      }
+
+      /* ---------- RESTORE ----------
+         POST ?action=restore-preview  body: { snapshot: {...} } or { snapshot_id: N } → counts only, changes nothing
+         POST ?action=restore          body: { snapshot: {...} } or { snapshot_id: N } → performs the restore
+         Restore strategy: INSERT missing rows by id (skip existing), never overwrite or delete.
+         Users are restored only if the account does not already exist (email wins, and never
+         without a password_hash — uploaded dumps are hash-free, so those rows are skipped). */
+      if (method === 'POST' && (action === 'restore' || action === 'restore-preview')) {
+        let snapshot = body.snapshot;
+        if (!snapshot && Number(body.snapshot_id)) {
+          const row = await backupPool.query('SELECT payload FROM backups WHERE id = $1', [Number(body.snapshot_id)]);
+          if (!row.rows.length) return fail(res, 'Backup snapshot not found.', 404);
+          snapshot = row.rows[0].payload;
+        }
+        if (!snapshot || !snapshot.tables || typeof snapshot.tables !== 'object') {
+          return fail(res, 'That file is not a valid LEC backup (missing "tables" section).', 422);
+        }
+        const RESTORE_ORDER = ['users','customers','vehicles','mechanics','spare_parts','job_cards','job_card_parts','invoices','payments','service_requests','gallery_images'];
+        const dryRun = action === 'restore-preview';
+        const report = { preview: dryRun, tables: {}, skipped: {}, total_restored: 0 };
+        const client = await backupPool.connect();
+        try {
+          await client.query('BEGIN');
+          for (const table of RESTORE_ORDER) {
+            const rows = snapshot.tables[table];
+            if (!Array.isArray(rows) || rows.length === 0) continue;
+            let restored = 0;
+            let skipped = 0;
+            for (const r of rows) {
+              const rowId = Number(r.id);
+              if (!rowId) { skipped++; continue; }
+              const exists = await client.query(`SELECT 1 FROM ${table} WHERE id = $1 LIMIT 1`, [rowId]);
+              if (exists.rows.length) { skipped++; continue; }
+              if (table === 'users') {
+                // Skip hash-free user rows (downloaded dumps) and email collisions.
+                if (!r.password_hash) { skipped++; continue; }
+                if (r.email) {
+                  const dupe = await client.query('SELECT 1 FROM users WHERE email = $1 LIMIT 1', [r.email]);
+                  if (dupe.rows.length) { skipped++; continue; }
+                }
+              }
+              if (table === 'gallery_images' && !r.data) { skipped++; continue; } // bytes omitted → cannot restore image itself
+              if (dryRun) { restored++; continue; }
+              const cols = Object.keys(r).filter((c) => c !== '_image_bytes_omitted');
+              const vals = cols.map((c) => r[c]);
+              const ph = cols.map((_, i) => `$${i + 1}`).join(', ');
+              try {
+                await client.query(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${ph})`, vals);
+                restored++;
+              } catch (rowError) {
+                // FK or constraint problem on this single row — skip it, keep the rest.
+                skipped++;
+              }
+            }
+            report.tables[table] = { restored, skipped };
+            report.total_restored += restored;
+          }
+          if (dryRun) {
+            await client.query('ROLLBACK');
+          } else {
+            await client.query('COMMIT');
+            await logActivity(backupPool, 'create', 'backups', null, `Restore executed: ${report.total_restored} rows recovered`, user);
+          }
+        } finally {
+          client.release();
+        }
+        return json(res, report);
       }
       return fail(res, 'Method not allowed.', 405);
     }
